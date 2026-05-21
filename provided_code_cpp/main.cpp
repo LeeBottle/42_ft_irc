@@ -1,5 +1,5 @@
 
-#include "bircd.h"
+#include "bircd.hpp"
 
 int	main(int ac, char **av)
 {

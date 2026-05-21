@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include "bircd.h"
+#include "bircd.hpp"
 
 void			srv_create(t_env *e, int port)
 {

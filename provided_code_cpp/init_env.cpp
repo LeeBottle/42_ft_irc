@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 #include <sys/resource.h>
-#include "bircd.h"
+#include "bircd.hpp"
 
 void		init_env(t_env *e)
 {

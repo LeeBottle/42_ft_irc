@@ -1,6 +1,6 @@
 
 #include <stdlib.h>
-#include "bircd.h"
+#include "bircd.hpp"
 
 void	clean_fd(t_fd *fd)
 {

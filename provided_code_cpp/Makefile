@@ -1,17 +1,17 @@
 
-SRCS =	main.c init_env.c clean_fd.c get_opt.c x.c main_loop.c \
-	init_fd.c do_select.c check_fd.c \
-	srv_create.c srv_accept.c \
-	client_read.c client_write.c
+SRCS =	main.cpp init_env.cpp clean_fd.cpp get_opt.cpp x.cpp main_loop.cpp \
+	init_fd.cpp do_select.cpp check_fd.cpp \
+	srv_create.cpp srv_accept.cpp \
+	client_read.cpp client_write.cpp
 
-OBJS = ${SRCS:.c=.o}
+OBJS = ${SRCS:.cpp=.o}
 
-NAME = bircd
+NAME = ircserv
 
-CFLAGS = -I. -g3 -Wall -Werror
+CFLAGS = -I. -g3 -Wall -Wextra -Werror -std=c++98
 LDFLAGS = 
 
-CC = gcc
+CC = c++ 
 RM = rm -f
 
 ${NAME}:	${OBJS}

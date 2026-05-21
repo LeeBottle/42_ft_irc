@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "bircd.h"
+#include "bircd.hpp"
 
 void			srv_accept(t_env *e, int s)
 {

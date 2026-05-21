@@ -18,8 +18,8 @@
 typedef struct	s_fd
 {
   int	type;
-  void	(*fct_read)();
-  void	(*fct_write)();
+	void	(*fct_read)(struct s_env *, int);
+  void	(*fct_write)(struct s_env *, int);
   char	buf_read[BUF_SIZE + 1];
   char	buf_write[BUF_SIZE + 1];
 }		t_fd;
@@ -43,8 +43,8 @@ void	srv_accept(t_env *e, int s);
 void	client_read(t_env *e, int cs);
 void	client_write(t_env *e, int cs);
 void	clean_fd(t_fd *fd);
-int	x_int(int err, int res, char *str, char *file, int line);
-void	*x_void(void *err, void *res, char *str, char *file, int line);
+int	x_int(int err, int res, const char *str, const char *file, int line);
+void	*x_void(void *err, void *res, const char *str, const char *file, int line);
 void	init_fd(t_env *e);
 void	do_select(t_env *e);
 void	check_fd(t_env *e);
