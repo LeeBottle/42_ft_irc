@@ -1,8 +1,6 @@
-
-#include <stdlib.h>
 #include "bircd.hpp"
 
-void	do_select(t_env *e)
+void	env::do_select()
 {
-  e->r = select(e->max + 1, &e->fd_read, &e->fd_write, NULL, NULL);
+  r = select(max + 1, &fd_read, &fd_write, NULL, NULL);
 }

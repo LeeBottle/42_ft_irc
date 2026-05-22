@@ -1,7 +1,6 @@
-
-#include <sys/socket.h>
 #include "bircd.hpp"
 
-void	client_write(t_env *e, int cs)
+void	env::client_write(int cs)
 {
+	(void)cs;
 }

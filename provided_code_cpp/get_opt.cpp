@@ -1,15 +1,12 @@
-
-#include <stdio.h>
-#include <stdlib.h>
 #include "bircd.hpp"
 
-void	get_opt(t_env *e, int ac, char **av)
+void	env::get_opt(int ac, char **av)
 {
-  if (ac != 2)
-    {
-      fprintf(stderr, USAGE, av[0]);
-      exit(1);
-    }
-  e->port = atoi(av[1]);
+	if (ac != 2)
+	{
+		std::cerr << "Usage: " << av[0] << " port" << std::endl;
+		exit(1);
+	}
+  port = atoi(av[1]);
 }
 

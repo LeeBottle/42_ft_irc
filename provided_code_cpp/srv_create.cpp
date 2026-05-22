@@ -1,22 +1,37 @@
-
-#include <stdlib.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include "bircd.hpp"
 
-void			srv_create(t_env *e, int port)
+void			env::srv_create()
 {
-  int			s;
-  struct sockaddr_in	sin;
-  struct protoent	*pe;
+	int			s;
+	sockaddr_in	sin;
+	protoent	*pe;
   
-  pe = (struct protoent*)Xv(NULL, getprotobyname("tcp"), "getprotobyname");
-  s = X(-1, socket(PF_INET, SOCK_STREAM, pe->p_proto), "socket");
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = INADDR_ANY;
-  sin.sin_port = htons(port);
-  X(-1, bind(s, (struct sockaddr*)&sin, sizeof(sin)), "bind");
-  X(-1, listen(s, 42), "listen");
-  e->fds[s].type = FD_SERV;
-  e->fds[s].fct_read = srv_accept;
+	pe = getprotobyname("tcp");
+	if (pe == NULL)
+	{
+		fprintf(stderr, "getprotobyname error (%s, %d): %s\n", __FILE__, __LINE__, strerror(errno));
+		exit(1);
+	}
+	s = socket(PF_INET, SOCK_STREAM, pe->p_proto);
+	if (s == -1)
+	{
+		fprintf(stderr, "socket error (%s, %d): %s\n", __FILE__, __LINE__, strerror(errno));
+		exit(1);
+	}
+
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = INADDR_ANY;
+	sin.sin_port = htons(port);
+	if (bind(s, reinterpret_cast<sockaddr*>(&sin), sizeof(sin)) == -1)
+	{
+		fprintf(stderr, "bind error (%s, %d): %s\n", __FILE__, __LINE__, strerror(errno));
+		exit(1);
+	}
+	if (listen(s, 42) == -1)
+	{
+		fprintf(stderr, "listen error (%s, %d): %s\n", __FILE__, __LINE__, strerror(errno));
+		exit(1);
+	}
+	fds[s].type = FD_SERV;
+	fds[s].fct_read = &env::srv_accept;
 }

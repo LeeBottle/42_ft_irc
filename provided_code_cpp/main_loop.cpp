@@ -1,12 +1,11 @@
-
 #include "bircd.hpp"
 
-void	main_loop(t_env *e)
+void	env::main_loop()
 {
   while (1)
     {
-      init_fd(e);
-      do_select(e);
-      check_fd(e);
+      inifd();
+      do_select();
+      check_fd();
     }
 }

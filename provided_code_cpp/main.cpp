@@ -1,13 +1,12 @@
-
 #include "bircd.hpp"
 
 int	main(int ac, char **av)
 {
-  t_env	e;
+  env	e;
 
-  init_env(&e);
-  get_opt(&e, ac, av);
-  srv_create(&e, e.port);
-  main_loop(&e);
+  e.init_env();
+  e.get_opt(ac, av);
+  e.srv_create();
+  e.main_loop();
   return (0);
 }

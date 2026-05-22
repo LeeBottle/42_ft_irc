@@ -1,27 +1,24 @@
-
-#include <string.h>
-# include <sys/select.h>
 #include "bircd.hpp"
 
-void	init_fd(t_env *e)
+void	env::inifd()
 {
-  int	i;
+	int	i;
 
-  i = 0;
-  e->max = 0;
-  FD_ZERO(&e->fd_read);
-  FD_ZERO(&e->fd_write);
-  while (i < e->maxfd)
-    {
-      if (e->fds[i].type != FD_FREE)
+	i = 0;
+	max = 0;
+	FD_ZERO(&fd_read);
+	FD_ZERO(&fd_write);
+	while (i < maxfd)
 	{
-	  FD_SET(i, &e->fd_read);
-	  if (strlen(e->fds[i].buf_write) > 0)
-	    {
-	      FD_SET(i, &e->fd_write);
-	    }
-	  e->max = MAX(e->max, i);
+		if (fds[i].type != FD_FREE)
+		{
+		FD_SET(i, &fd_read);
+		if (!fds[i].buf_write.empty())
+		{
+			FD_SET(i, &fd_write);
+		}
+		max = std::max(max, i);
+		}
+		i++;
 	}
-      i++;
-    }
 }

@@ -1,7 +1,24 @@
 #ifndef BIRCD_H_
 # define BIRCD_H_
 
+// C++ 표준 라이브러리 헤더
+# include <algorithm>
+# include <iostream>
+# include <cstdio>
+# include <cstdlib>
+# include <cstring>
+# include <cerrno>
+# include <new>
+# include <vector>
+
+// 시스템 및 네트워크 관련 헤더
 # include <sys/select.h>
+# include <sys/socket.h>
+# include <sys/resource.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
+# include <netdb.h>
+# include <unistd.h>
 
 # define FD_FREE	0
 # define FD_SERV	1
@@ -9,44 +26,61 @@
 
 # define BUF_SIZE	4096
 
-# define Xv(err,res,str)	(x_void(err,res,str,__FILE__,__LINE__))
-# define X(err,res,str)		(x_int(err,res,str,__FILE__,__LINE__))
-# define MAX(a,b)	((a > b) ? a : b)
 
-# define USAGE		"Usage: %s port\n"
+class env;
 
-typedef struct	s_fd
+class fd
 {
-  int	type;
-	void	(*fct_read)(struct s_env *, int);
-  void	(*fct_write)(struct s_env *, int);
-  char	buf_read[BUF_SIZE + 1];
-  char	buf_write[BUF_SIZE + 1];
-}		t_fd;
+public:
+	int			type;
+	void		(env::*fct_read)(int);
+	void		(env::*fct_write)(int);
+	std::string	buf_read;
+	std::string	buf_write;
 
-typedef struct	s_env
+	fd() : type(0), fct_read(NULL), fct_write(NULL), buf_read(""), buf_write("") {}
+	~fd() {}
+
+	void	clean_fd();
+};
+
+
+class env
 {
-  t_fd		*fds;
-  int		port;
-  int		maxfd;
-  int		max;
-  int		r;
-  fd_set	fd_read;
-  fd_set	fd_write;
-}		t_env;
+public:
+	std::vector<fd>	fds;
+	int		port;
+	int		maxfd;
+	int		max;
+	int		r;
+	fd_set	fd_read;
+	fd_set	fd_write;
 
-void	init_env(t_env *e);
-void	get_opt(t_env *e, int ac, char **av);
-void	main_loop(t_env *e);
-void	srv_create(t_env *e, int port);
-void	srv_accept(t_env *e, int s);
-void	client_read(t_env *e, int cs);
-void	client_write(t_env *e, int cs);
-void	clean_fd(t_fd *fd);
-int	x_int(int err, int res, const char *str, const char *file, int line);
-void	*x_void(void *err, void *res, const char *str, const char *file, int line);
-void	init_fd(t_env *e);
-void	do_select(t_env *e);
-void	check_fd(t_env *e);
+	env() :  port(0), maxfd(0), max(0), r(0)
+	{
+		FD_ZERO(&fd_read);
+		FD_ZERO(&fd_write);
+	}
+	~env() {}
 
-#endif /* !BIRCD_H_ */
+	//
+	void	init_env();
+
+	//
+	void	get_opt(int ac, char **av);
+
+	//
+	void	srv_create();
+	void	srv_accept(int s);
+	void	client_read(int cs);
+	void	client_write(int cs);
+	
+	//
+	void	main_loop();
+	void	inifd();
+	void	do_select();
+	void	check_fd();
+};
+
+
+#endif

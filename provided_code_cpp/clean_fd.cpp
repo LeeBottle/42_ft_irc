@@ -1,10 +1,10 @@
-
-#include <stdlib.h>
 #include "bircd.hpp"
 
-void	clean_fd(t_fd *fd)
+void	fd::clean_fd()
 {
-  fd->type = FD_FREE;
-  fd->fct_read = NULL;
-  fd->fct_write = NULL;
+	type = 0;
+	fct_read = NULL;
+	fct_write = NULL;
+	buf_read.clear();
+	buf_write.clear();
 }

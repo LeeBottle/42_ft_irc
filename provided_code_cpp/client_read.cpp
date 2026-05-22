@@ -1,30 +1,29 @@
-
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/socket.h>
 #include "bircd.hpp"
 
-void	client_read(t_env *e, int cs)
+void	env::client_read(int cs)
 {
-  int	r;
-  int	i;
+	int	r;
+	int	i;
 
-  r = recv(cs, e->fds[cs].buf_read, BUF_SIZE, 0);
-  if (r <= 0)
-    {
-      close(cs);
-      clean_fd(&e->fds[cs]);
-      printf("client #%d gone away\n", cs);
-    }
-  else
-    {
-      i = 0;
-      while (i < e->maxfd)
+	char	buf[BUF_SIZE + 1];
+
+	std::memset(buf, 0, sizeof(buf));
+	r = recv(cs, buf, BUF_SIZE, 0);
+	if (r <= 0)
 	{
-	  if ((e->fds[i].type == FD_CLIENT) &&
-	      (i != cs))
-	    send(i, e->fds[cs].buf_read, r, 0);
-	  i++;
+		close(cs);
+		fds[cs].clean_fd();
+		printf("client #%d gone away\n", cs);
 	}
+	else
+	{
+		fds[cs].buf_read = std::string(buf, r);
+		i = 0;
+		while (i < maxfd)
+		{
+			if ((fds[i].type == FD_CLIENT) && (i != cs))
+				send(i, fds[cs].buf_read.data(), fds[cs].buf_read.size(), 0);
+			i++;
+		}
     }
 }
