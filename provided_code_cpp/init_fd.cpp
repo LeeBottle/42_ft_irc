@@ -12,12 +12,12 @@ void	env::inifd()
 	{
 		if (fds[i].type != FD_FREE)
 		{
-		FD_SET(i, &fd_read);
-		if (!fds[i].buf_write.empty())
-		{
-			FD_SET(i, &fd_write);
-		}
-		max = std::max(max, i);
+			FD_SET(i, &fd_read);
+			if (!fds[i].buf_write.empty())
+			{
+				FD_SET(i, &fd_write);
+			}
+			max = std::max(max, i);
 		}
 		i++;
 	}

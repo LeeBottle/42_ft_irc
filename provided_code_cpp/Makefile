@@ -1,14 +1,15 @@
 
 SRCS =	main.cpp init_env.cpp clean_fd.cpp get_opt.cpp main_loop.cpp \
-	init_fd.cpp do_select.cpp check_fd.cpp \
+	do_select.cpp check_fd.cpp \
 	srv_create.cpp srv_accept.cpp \
-	client_read.cpp client_write.cpp
+	client_read.cpp client_write.cpp \
+	init_epoll.cpp check_epoll.cpp
 
 OBJS = ${SRCS:.cpp=.o}
 
 NAME = ircserv
 
-CFLAGS = -I. -g -Wall -Wextra -Werror -std=c++98
+CFLAGS = -I. -g -std=c++98
 
 LDFLAGS = 
 

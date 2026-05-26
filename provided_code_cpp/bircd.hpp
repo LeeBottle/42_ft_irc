@@ -1,24 +1,38 @@
 #ifndef BIRCD_H_
 # define BIRCD_H_
 
-// C++ 표준 라이브러리 헤더
-# include <algorithm>
-# include <iostream>
-# include <cstdio>
-# include <cstdlib>
-# include <cstring>
-# include <cerrno>
-# include <new>
-# include <vector>
+// 입출력 및 문자열 처리
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <cstring>
+// 컨테이너 및 알고리즘
+#include <vector>
+#include <algorithm>
+// 메모리 및 예외 처리
+#include <new>
+#include <cstdlib>
+#include <cerrno>
 
-// 시스템 및 네트워크 관련 헤더
-# include <sys/select.h>
-# include <sys/socket.h>
-# include <sys/resource.h>
-# include <netinet/in.h>
-# include <arpa/inet.h>
-# include <netdb.h>
-# include <unistd.h>
+
+// 파일 디스크립터 및 시스템 자원 관리
+#include <unistd.h>
+#include <sys/resource.h>
+
+
+// epoll 기반 이벤트 처리
+#include <sys/epoll.h>
+// select 기반 이벤트 처리
+#include <sys/select.h>
+
+
+// 소켓 기본 API
+#include <sys/socket.h>
+// 인터넷 주소 구조체 및 프로토콜
+#include <netinet/in.h>
+#include <arpa/inet.h>
+// DNS 및 호스트 정보 조회
+#include <netdb.h>
 
 # define FD_FREE	0
 # define FD_SERV	1
@@ -50,24 +64,21 @@ class env
 public:
 	std::vector<fd>	fds;
 	int		port;
-	int		maxfd;
 	int		max;
 	int		r;
-	fd_set	fd_read;
-	fd_set	fd_write;
 
-	env() :  port(0), maxfd(0), max(0), r(0)
-	{
-		FD_ZERO(&fd_read);
-		FD_ZERO(&fd_write);
-	}
+	int								epoll_fd;
+    std::vector<struct epoll_event> epoll_events;
+	std::string	password;
+
+	env() : port(0), epoll_fd(-1), max(0), r(0) {}
 	~env() {}
 
 	//
 	void	init_env();
 
 	//
-	void	get_opt(int ac, char **av);
+	void	get_opt(int ac, char **av, env &e);
 
 	//
 	void	srv_create();
@@ -80,6 +91,11 @@ public:
 	void	inifd();
 	void	do_select();
 	void	check_fd();
+
+	void	epoll_add(int fd, uint32_t events);
+	void	epoll_del(int fd);
+	void	epoll_mod(int fd, uint32_t events);
+	void	check_epoll();
 };
 
 

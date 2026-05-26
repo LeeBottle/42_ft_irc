@@ -2,19 +2,19 @@
 
 void	env::check_fd()
 {
-  int	i;
+	for (int i = 0; i < r; i++)
+	{
+		int fd = epoll_events[i].data.fd;
+		uint32_t events = epoll_events[i].events;
 
-  i = 0;
-  while ((i < maxfd) && (r > 0))
-    {
-		if (FD_ISSET(i, &fd_read) && fds[i].fct_read != NULL)
-			(this->*fds[i].fct_read)(i);
-	
-		if (FD_ISSET(i, &fd_write) && fds[i].fct_write != NULL)
-		(this->*fds[i].fct_write)(i);
-	
-		if (FD_ISSET(i, &fd_read) || FD_ISSET(i, &fd_write))
-			r--;
-		i++;
-    }
+		if ((events & EPOLLIN) && fds[fd].fct_read != NULL)
+		{
+			(this->*fds[fd].fct_read)(fd);
+		}
+
+		if ((events & EPOLLOUT) && fds[fd].fct_write != NULL)
+		{
+			(this->*fds[fd].fct_write)(fd);
+		}
+	}
 }

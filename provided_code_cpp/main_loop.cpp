@@ -2,10 +2,9 @@
 
 void	env::main_loop()
 {
-  while (1)
-    {
-      inifd();
-      do_select();
-      check_fd();
-    }
+	while (1)
+	{
+		do_select();
+		check_epoll();
+	}
 }
