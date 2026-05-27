@@ -4,7 +4,7 @@ void	env::main_loop()
 {
 	while (1)
 	{
-		do_select();
+		do_epoll();
 		check_epoll();
 	}
 }

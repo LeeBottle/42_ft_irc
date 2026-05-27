@@ -83,14 +83,19 @@ public:
 	//
 	void	srv_create();
 	void	srv_accept(int s);
+	
 	void	client_read(int cs);
+	std::string	client_read_line(int cs);
+	void 	handle_commands(int cs, const std::string& cmd_line);
+	void 	handle_command_pass(int cs, const std::string& cmd_line);
+	void	broadcast_message(int sender_cs, const std::string& message);
+
 	void	client_write(int cs);
 	
 	//
 	void	main_loop();
 	void	inifd();
-	void	do_select();
-	void	check_fd();
+	void	do_epoll();
 
 	void	epoll_add(int fd, uint32_t events);
 	void	epoll_del(int fd);

@@ -18,7 +18,7 @@ void	env::srv_accept(int s)
 			<< inet_ntoa(csin.sin_addr) << ":" << ntohs(csin.sin_port) << std::endl;
 
 	fds[cs].clean_fd();
-	fds[cs].type = FD_CLIENT;
+	fds[cs].type = FD_FREE;
 	fds[cs].fct_read = &env::client_read;
 	fds[cs].fct_write = &env::client_write;
 	
