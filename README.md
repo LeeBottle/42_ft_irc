@@ -37,7 +37,35 @@ irssi에서 슬래시 없이 hello라고 치면, 서버 수신 버퍼에서는 �
 PRIVMSG * :hello
 ```
 
-## 목 목표
-PRIVMSG처리  
+# 05/28
+## handle_command_pass
+클라이언트가 처음 보낸 비밀번호가 서버 설정 비밀번호와 일치하는지 검증  
+
+## handle_command_nick
+닉네임을 설정  
+공백이 섞여 들어와도 첫 번째 인자만 사용  
+중복 검사 기능  
+```
+./irssi  
+/connect <ipaddress> <port> <password>  
+/NICK <text>  
+```
+
+## handle_command_user
+계정명 설정  
+서버 내 중복이 가능하므로 중복 검사를 하지 않음  
+```
+./irssi  
+/connect <ipaddress> <port> <password>  
+/USER <text>  
+```
+
+## handle_command_privmsg
+클라이언트가 보낸 대화 패킷에서 콜론(:) 또는 공백 뒤에 오는 순수한 대화 텍스트 본문만 사용하는 함수  
 ->irssi에서 /PASS 1234가 아니라 PASS 1234의 경우 텍스트 처리되어야 함  
-->nc에서 PASS를 또 쳤을 때 서버가 클라이언트를 강퇴하는 것은 틀린것이니 끊지 말고 에러 번호만 응답해야 함
+
+## irssi에서 /quote가 없을 시
+대화방이 없는 메인 로비
+/JOIN으로 강제로 대화방에 갈 경우 /quote없이도 입력 가능
+->nc에서는 /JOIN없이도 대화가 가능한상황
+->채팅방 기능 추가 필요

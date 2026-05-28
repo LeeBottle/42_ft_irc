@@ -51,6 +51,8 @@ public:
 	void		(env::*fct_write)(int);
 	std::string	buf_read;
 	std::string	buf_write;
+	std::string nickname;
+    std::string username;
 
 	fd() : type(0), fct_read(NULL), fct_write(NULL), buf_read(""), buf_write("") {}
 	~fd() {}
@@ -89,6 +91,9 @@ public:
 	void 	handle_commands(int cs, const std::string& cmd_line);
 	void 	handle_command_pass(int cs, const std::string& cmd_line);
 	void	broadcast_message(int sender_cs, const std::string& message);
+	void 	handle_command_nick(int cs, const std::string& cmd_line);
+	void 	handle_command_user(int cs, const std::string& cmd_line);
+	void	handle_command_privmsg(int cs, const std::string& cmd_line);
 
 	void	client_write(int cs);
 	

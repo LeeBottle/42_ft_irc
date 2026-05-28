@@ -38,6 +38,9 @@ void	env::client_read(int cs)
 	else
 	{
 		buf[r] = '\0';
+		std::cout << "\n┌-- [RAW DATA] Received from #" << cs << " (Bytes: " << r << ") --┐" << std::endl;
+		std::cout << buf;
+		std::cout << "└---------------------------------------------┘\n" << std::endl;
 		fds[cs].buf_read += buf;
 
 		while (true)

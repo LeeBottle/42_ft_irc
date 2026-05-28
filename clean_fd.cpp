@@ -7,4 +7,6 @@ void	fd::clean_fd()
 	fct_write = NULL;
 	buf_read.clear();
 	buf_write.clear();
+	nickname.clear();
+	username.clear();
 }
