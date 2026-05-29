@@ -9,15 +9,18 @@ OBJS = ${SRCS:.cpp=.o}
 
 NAME = ircserv
 
-CFLAGS = -I. -g -std=c++98
+CXXFLAGS = -I. -g -Wall -Wextra -Werror -std=c++98
 
 LDFLAGS = 
 
-CC = c++ 
+CXX = c++ 
 RM = rm -f
 
 ${NAME}:	${OBJS}
-		${CC} -o ${NAME} ${OBJS} ${LDFLAGS}
+	${CXX} ${CXXFLAGS} -o ${NAME} ${OBJS} ${LDFLAGS}
+
+%.o: %.cpp
+	${CXX} ${CXXFLAGS} -c $< -o $@
 
 all:		${NAME}
 

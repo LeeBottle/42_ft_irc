@@ -73,7 +73,7 @@ public:
     std::vector<struct epoll_event> epoll_events;
 	std::string	password;
 
-	env() : port(0), epoll_fd(-1), max(0), r(0) {}
+	env() : port(0), max(0), r(0), epoll_fd(-1), password("") {}
 	~env() {}
 
 	//

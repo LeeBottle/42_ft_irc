@@ -14,7 +14,9 @@
 				}
 				else
 				{
-					msg = "[Client " + std::to_string(sender_cs) + "]: " + message + "\r\n";
+					std::stringstream ss;
+					ss << sender_cs;
+					msg = "[Client " + ss.str() + "]: " + message + "\r\n";
 				}
 				fds[i].buf_write += msg;
 
