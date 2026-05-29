@@ -17,6 +17,7 @@
 
 // 파일 디스크립터 및 시스템 자원 관리
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/resource.h>
 
 
@@ -85,6 +86,7 @@ public:
 	//
 	void	srv_create();
 	void	srv_accept(int s);
+	void	set_non_blocking(int fd);
 	
 	void	client_read(int cs);
 	std::string	client_read_line(int cs);

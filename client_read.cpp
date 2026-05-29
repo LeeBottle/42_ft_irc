@@ -25,41 +25,52 @@ std::string	env::client_read_line(int cs)
 void	env::client_read(int cs)
 {
 	char	buf[BUF_SIZE + 1];
-	int		r;
+	ssize_t	r;
 
 	r = read(cs, buf, BUF_SIZE);
-	if (r <= 0)
+	if (r == 0)
 	{
 		std::cout << "Client #" << cs << " disconnected." << std::endl;
 		epoll_del(cs);
 		close(cs);
 		fds[cs].clean_fd();
+		return;
 	}
-	else
+	if (r < 0)
 	{
-		buf[r] = '\0';
-		std::cout << "\n┌-- [RAW DATA] Received from #" << cs << " (Bytes: " << r << ") --┐" << std::endl;
-		std::cout << buf;
-		std::cout << "└---------------------------------------------┘\n" << std::endl;
-		fds[cs].buf_read += buf;
-
-		while (true)
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 		{
-			std::string cmd_line = client_read_line(cs);
-
-			if (cmd_line.empty())
-			{
-				break;
-			}
-
-			std::cout << "Process Line from #" << cs << ": " << cmd_line << std::endl;
-
-			handle_commands(cs, cmd_line);
-
-			if (fds[cs].type != FD_CLIENT)
-				continue;
-
-			broadcast_message(cs, cmd_line);
+			return;
 		}
+		std::cerr << "read error (" << __FILE__ << ", " << __LINE__ << "): " << strerror(errno) << std::endl;
+		epoll_del(cs);
+		close(cs);
+		fds[cs].clean_fd();
+		return;
+	}
+
+	buf[r] = '\0';
+	std::cout << "\n┌-- [RAW DATA] Received from #" << cs << " (Bytes: " << r << ") --┐" << std::endl;
+	std::cout << buf;
+	std::cout << "└---------------------------------------------┘\n" << std::endl;
+	fds[cs].buf_read += buf;
+
+	while (true)
+	{
+		std::string cmd_line = client_read_line(cs);
+
+		if (cmd_line.empty())
+		{
+			break;
+		}
+
+		std::cout << "Process Line from #" << cs << ": " << cmd_line << std::endl;
+
+		handle_commands(cs, cmd_line);
+
+		if (fds[cs].type != FD_CLIENT)
+			continue;
+
+		broadcast_message(cs, cmd_line);
 	}
 }
