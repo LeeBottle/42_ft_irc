@@ -57,7 +57,20 @@ void env::handle_command_pass(int cs, const std::string& cmd_line)
 		epoll_mod(cs, EPOLLIN | EPOLLOUT);
 		return;
 	}
+	if (cmd_line.size() <= 4 || (cmd_line.size() > 4 && !std::isspace(static_cast<unsigned char>(cmd_line[4]))))
+	{
+		fds[cs].buf_write += ":ircserv 461 * PASS :Not enough parameters\r\n";
+		epoll_mod(cs, EPOLLIN | EPOLLOUT);
+		return;
+	}
+
 	std::string input_pw = cmd_line.substr(5);
+	if (input_pw.empty())
+	{
+		fds[cs].buf_write += ":ircserv 461 * PASS :Not enough parameters\r\n";
+		epoll_mod(cs, EPOLLIN | EPOLLOUT);
+		return;
+	}
 
 	if (input_pw == password)
 	{
@@ -174,8 +187,14 @@ void env::handle_command_privmsg(int cs, const std::string& cmd_line)
 		size_t space_pos = cmd_line.find(' ', 8);
 		if (space_pos != std::string::npos)
 			pure_message = cmd_line.substr(space_pos + 1);
-		else
+		else if (cmd_line.size() > 8)
 			pure_message = cmd_line.substr(8);
+		else
+		{
+			fds[cs].buf_write += ":ircserv 412 " + fds[cs].nickname + " :No text to send\r\n";
+			epoll_mod(cs, EPOLLIN | EPOLLOUT);
+			return;
+		}
 	}
 
 	broadcast_message(cs, pure_message);
