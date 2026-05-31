@@ -28,6 +28,13 @@ void	env::client_write(int cs)
 
 	if (fds[cs].buf_write.empty())
 	{
+		if (fds[cs].close_after_write)
+		{
+			epoll_del(cs);
+			close(cs);
+			fds[cs].clean_fd();
+			return;
+		}
 		epoll_mod(cs, EPOLLIN);
 	}
 }

@@ -54,8 +54,9 @@ public:
 	std::string	buf_write;
 	std::string nickname;
     std::string username;
+	bool		close_after_write;
 
-	fd() : type(0), fct_read(NULL), fct_write(NULL), buf_read(""), buf_write("") {}
+	fd() : type(0), fct_read(NULL), fct_write(NULL), buf_read(""), buf_write(""), close_after_write(false) {}
 	~fd() {}
 
 	void	clean_fd();

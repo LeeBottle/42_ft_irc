@@ -11,13 +11,13 @@
 
 ## 0. 작업 전 정리
 
-- [ ] `.gitignore` 추가
-  - [ ] `*.o`
-  - [ ] `*.tmp`
-  - [ ] `ircserv`
-- [ ] 현재 untracked 산출물 정리
-  - [ ] `ircserv`
-  - [ ] `*.o`
+- [x] `.gitignore` 추가
+  - [x] `*.o`
+  - [x] `*.tmp`
+  - [x] `ircserv`
+- [x] 현재 untracked 산출물 정리
+  - [x] `ircserv`
+  - [x] `*.o`
 - [ ] 예전 코드 폴더 `provided_code_cpp/`를 유지할지 삭제할지 결정
 - [ ] 문서 파일을 repo에 남길지 결정
   - [ ] `ft_irc_review.md`
@@ -26,23 +26,23 @@
 
 ## 1. 네트워크/이벤트 루프 안정화
 
-- [ ] 서버 소켓 non-blocking 설정
+- [x] 서버 소켓 non-blocking 설정
   - 대상: `srv_create.cpp`
   - `fcntl(server_fd, F_SETFL, O_NONBLOCK)`
-- [ ] accept된 클라이언트 소켓 non-blocking 설정
+- [x] accept된 클라이언트 소켓 non-blocking 설정
   - 대상: `srv_accept.cpp`
   - `fcntl(client_fd, F_SETFL, O_NONBLOCK)`
-- [ ] `accept()` 에러 처리 개선
-  - [ ] `EAGAIN`, `EWOULDBLOCK`, `EINTR`은 서버 종료하지 않기
-  - [ ] 실제 오류만 로그 처리
-- [ ] `read()` 에러 처리 개선
-  - [ ] `EAGAIN`, `EWOULDBLOCK`, `EINTR` 처리
-  - [ ] `r == 0`일 때 정상 disconnect 처리
-- [ ] `write()` 에러 처리 개선
-  - [ ] 반환 타입 `int`에서 `ssize_t`로 변경
-  - [ ] partial write 유지
-  - [ ] `EAGAIN`, `EWOULDBLOCK`, `EINTR` 처리
-- [ ] `send()` 직접 호출 제거
+- [x] `accept()` 에러 처리 개선
+  - [x] `EAGAIN`, `EWOULDBLOCK`, `EINTR`은 서버 종료하지 않기
+  - [x] 실제 오류만 로그 처리
+- [x] `read()` 에러 처리 개선
+  - [x] `EAGAIN`, `EWOULDBLOCK`, `EINTR` 처리
+  - [x] `r == 0`일 때 정상 disconnect 처리
+- [x] `write()` 에러 처리 개선
+  - [x] 반환 타입 `int`에서 `ssize_t`로 변경
+  - [x] partial write 유지
+  - [x] `EAGAIN`, `EWOULDBLOCK`, `EINTR` 처리
+- [x] `send()` 직접 호출 제거
   - 모든 응답은 `buf_write`에 넣고 `EPOLLOUT`에서 전송
 
 ## 2. 클라이언트 상태 구조 정리
@@ -50,8 +50,8 @@
 - [ ] `fd` 클래스에 등록 상태 추가
   - [ ] `bool pass_ok`
   - [ ] `bool registered`
-  - [ ] `bool close_after_write`
-- [ ] `clean_fd()`에서 새 상태 초기화
+  - [x] `bool close_after_write`
+- [x] `clean_fd()`에서 새 상태 초기화
 - [ ] `type == FD_CLIENT`를 PASS 성공 의미로 쓰지 않도록 분리
   - `type`은 FD 종류만 표현
   - 인증/등록은 별도 bool로 관리

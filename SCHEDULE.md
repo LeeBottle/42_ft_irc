@@ -38,9 +38,9 @@
 
 작업:
 
-- [ ] non-blocking FD 설정
-- [ ] `accept/read/write` 에러 처리
-- [ ] `close_after_write` 추가
+- [x] non-blocking FD 설정
+- [x] `accept/read/write` 에러 처리
+- [x] `close_after_write` 추가
 - [ ] `pass_ok`, `registered` 상태 분리
 - [ ] `PASS/NICK/USER` numeric reply 정리
 - [ ] `PING`, `CAP` 최소 처리
@@ -99,30 +99,30 @@
 
 작업:
 
-- [ ] `.gitignore` 적용 상태 확인
-- [ ] 빌드 산출물 정리
-- [ ] 서버 소켓 non-blocking 설정
-- [ ] 클라이언트 소켓 non-blocking 설정
-- [ ] `accept()` 에러 처리
-  - [ ] `EAGAIN`
-  - [ ] `EWOULDBLOCK`
-  - [ ] `EINTR`
-- [ ] `read()` 에러 처리
-  - [ ] `r > 0`
-  - [ ] `r == 0`
-  - [ ] `r < 0`
-- [ ] `write()` 에러 처리
-  - [ ] `ssize_t` 사용
-  - [ ] partial write 유지
-  - [ ] `EAGAIN/EWOULDBLOCK/EINTR`
-- [ ] 직접 `send()` 제거
-- [ ] `close_after_write` 추가
+- [x] `.gitignore` 적용 상태 확인
+- [x] 빌드 산출물 정리
+- [x] 서버 소켓 non-blocking 설정
+- [x] 클라이언트 소켓 non-blocking 설정
+- [x] `accept()` 에러 처리
+  - [x] `EAGAIN`
+  - [x] `EWOULDBLOCK`
+  - [x] `EINTR`
+- [x] `read()` 에러 처리
+  - [x] `r > 0`
+  - [x] `r == 0`
+  - [x] `r < 0`
+- [x] `write()` 에러 처리
+  - [x] `ssize_t` 사용
+  - [x] partial write 유지
+  - [x] `EAGAIN/EWOULDBLOCK/EINTR`
+- [x] 직접 `send()` 제거
+- [x] `close_after_write` 추가
 
 완료 기준:
 
-- [ ] `make re` 성공
-- [ ] 정상 접속/종료해도 서버가 살아 있음
-- [ ] 잘못된 PASS에서 에러 응답을 보낸 뒤 연결 종료
+- [x] `make re` 성공
+- [x] 정상 접속/종료해도 서버가 살아 있음
+- [x] 잘못된 PASS에서 에러 응답을 보낸 뒤 연결 종료
 - [ ] 여러 클라이언트가 접속/종료해도 서버 유지
 
 테스트:

@@ -39,11 +39,9 @@ void env::handle_commands(int cs, const std::string& cmd_line)
 	else if (fds[cs].type != FD_CLIENT)
 	{
 		std::cout << "Client #" << cs << " rejected (Tried to chat without PASS)." << std::endl;
-		send(cs, ":ircserv 451 * :You must specify a password first (PASS).\r\n", 58, 0);
-
-		epoll_del(cs);
-		close(cs);
-		fds[cs].clean_fd();
+		fds[cs].buf_write += ":ircserv 451 * :You must specify a password first (PASS).\r\n";
+		fds[cs].close_after_write = true;
+		epoll_mod(cs, EPOLLIN | EPOLLOUT);
 		return;
 	}
 }
@@ -86,11 +84,8 @@ void env::handle_command_pass(int cs, const std::string& cmd_line)
 		std::cout << "Client #" << cs << " kicked (Incorrect password)." << std::endl;
 
 		fds[cs].buf_write += "Password incorrect.\r\n";
+		fds[cs].close_after_write = true;
 		epoll_mod(cs, EPOLLIN | EPOLLOUT);
-		
-		epoll_del(cs);
-		close(cs);
-		fds[cs].clean_fd();
 	}
 }
 
