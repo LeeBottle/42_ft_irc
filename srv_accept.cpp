@@ -10,9 +10,12 @@ void	env::srv_accept(int s)
 	cs = accept(s, reinterpret_cast<sockaddr*>(&csin), &csin_len);
 	if (cs == -1)
 	{
-		std::cerr << "accept error (" << __FILE__ << ", " << __LINE__ << "): " << strerror(errno) << std::endl;
-		exit(1);
+		if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
+		{
+			std::cerr << "accept error (" << __FILE__ << ", " << __LINE__ << "): " << strerror(errno) << std::endl;
+		}
 	}
+	set_non_blocking(cs);
 	
 	std::cout << "New client #" << cs << " from " 
 			<< inet_ntoa(csin.sin_addr) << ":" << ntohs(csin.sin_port) << std::endl;

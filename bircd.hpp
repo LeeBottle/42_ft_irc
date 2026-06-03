@@ -8,6 +8,7 @@
 #include <cstring>
 // 컨테이너 및 알고리즘
 #include <vector>
+#include <map>
 #include <algorithm>
 // 메모리 및 예외 처리
 #include <new>
@@ -17,6 +18,7 @@
 
 // 파일 디스크립터 및 시스템 자원 관리
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/resource.h>
 
 
@@ -33,6 +35,10 @@
 #include <arpa/inet.h>
 // DNS 및 호스트 정보 조회
 #include <netdb.h>
+
+
+#include "channel.hpp"
+
 
 # define FD_FREE	0
 # define FD_SERV	1
@@ -53,8 +59,10 @@ public:
 	std::string	buf_write;
 	std::string nickname;
     std::string username;
+	bool		close_after_write;
+	bool		is_welcomed;
 
-	fd() : type(0), fct_read(NULL), fct_write(NULL), buf_read(""), buf_write("") {}
+	fd() : type(0), fct_read(NULL), fct_write(NULL), buf_read(""), buf_write(""), close_after_write(false) {}
 	~fd() {}
 
 	void	clean_fd();
@@ -65,6 +73,7 @@ class env
 {
 public:
 	std::vector<fd>	fds;
+	std::map<std::string, Channel>	channels;
 	int		port;
 	int		max;
 	int		r;
@@ -73,7 +82,7 @@ public:
     std::vector<struct epoll_event> epoll_events;
 	std::string	password;
 
-	env() : port(0), epoll_fd(-1), max(0), r(0) {}
+	env() : port(0), epoll_fd(-1), max(0), r(0), password("") {}
 	~env() {}
 
 	//
@@ -85,15 +94,19 @@ public:
 	//
 	void	srv_create();
 	void	srv_accept(int s);
+	void	set_non_blocking(int fd);
 	
 	void	client_read(int cs);
 	std::string	client_read_line(int cs);
 	void 	handle_commands(int cs, const std::string& cmd_line);
 	void 	handle_command_pass(int cs, const std::string& cmd_line);
-	void	broadcast_message(int sender_cs, const std::string& message);
+	void	broadcast_message(int sender_cs, const std::string& target, const std::string& message);
 	void 	handle_command_nick(int cs, const std::string& cmd_line);
 	void 	handle_command_user(int cs, const std::string& cmd_line);
 	void	handle_command_privmsg(int cs, const std::string& cmd_line);
+	
+	void	handle_command_join(int cs, const std::string& cmd_line);
+	void    handle_command_part(int cs, const std::string& cmd_line);
 
 	void	client_write(int cs);
 	
@@ -104,7 +117,6 @@ public:
 
 	void	epoll_add(int fd, uint32_t events);
 	void	epoll_del(int fd);
-	void	epoll_mod(int fd, uint32_t events);
 	void	check_epoll();
 };
 

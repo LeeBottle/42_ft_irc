@@ -3,7 +3,8 @@ SRCS =	main.cpp init_env.cpp clean_fd.cpp get_opt.cpp main_loop.cpp \
 	srv_create.cpp srv_accept.cpp \
 	client_read.cpp client_read_handle.cpp client_read_broadcast.cpp\
 	client_write.cpp \
-	init_epoll.cpp check_epoll.cpp
+	init_epoll.cpp check_epoll.cpp \
+	channel.cpp
 
 OBJS = ${SRCS:.cpp=.o}
 

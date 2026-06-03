@@ -69,3 +69,45 @@ PRIVMSG * :hello
 /JOIN으로 강제로 대화방에 갈 경우 /quote없이도 입력 가능
 ->nc에서는 /JOIN없이도 대화가 가능한상황
 ->채팅방 기능 추가 필요
+
+
+
+# 06/03
+
+## 서버 구동
+./ircserv <port> <password>
+
+## irssi
+/connect <ip> <port> <password>
+
+ - 예외처리
+	- 비밀번호 누락 (/connect  <ip> <port>)
+	- 비밀번호 불일치 (/connect  <ip> <port> <wrong password>)
+
+/msg <message>
+
+/nick <newnick>
+
+/join #lobby
+<message>
+/part #lobby <message>
+
+
+
+## nc
+nc -C <ip> <port> 
+PASS <password>
+NICK <nickname>
+USER <username>
+JOIN #lobby
+PRIVMSG #lobby :<message>
+PART #lobby :<message>
+
+
+# 추가 사항
+## 운영자 전용 필수 명령어
+	KICK
+	INVITE
+	TOPIC
+	MODE
+## MODE 세부 플래그

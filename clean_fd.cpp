@@ -9,4 +9,6 @@ void	fd::clean_fd()
 	buf_write.clear();
 	nickname.clear();
 	username.clear();
+	close_after_write = false;
+	is_welcomed = false;
 }

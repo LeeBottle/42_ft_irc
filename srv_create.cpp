@@ -1,6 +1,16 @@
 #include "bircd.hpp"
 
-void			env::srv_create()
+void	env::set_non_blocking(int fd)
+{
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+	{
+		std::cerr << "fcntl error (" << __FILE__ << ", " << __LINE__ << "): " << strerror(errno) << std::endl;
+		close(fd);
+		exit(1);
+	}
+}
+
+void	env::srv_create()
 {
 	int			s;
 	sockaddr_in	sin;
@@ -18,7 +28,7 @@ void			env::srv_create()
 		std::cerr << "socket error (" << __FILE__ << ", " << __LINE__ << "): " << strerror(errno) << std::endl;
 		exit(1);
 	}
-
+	set_non_blocking(s);
 
 	sin.sin_family = AF_INET;
 	sin.sin_addr.s_addr = INADDR_ANY;
