@@ -107,6 +107,9 @@ public:
 	
 	void	handle_command_join(int cs, const std::string& cmd_line);
 	void    handle_command_part(int cs, const std::string& cmd_line);
+	void    handle_command_kick(int cs, const std::string& cmd_line);
+	void    handle_command_invite(int cs, const std::string& cmd_line);
+	void    handle_command_topic(int cs, const std::string& cmd_line);
 
 	void	client_write(int cs);
 	

@@ -105,9 +105,10 @@ PART #lobby :<message>
 
 
 # 추가 사항
-## 운영자 전용 필수 명령어
-	KICK
-	INVITE
-	TOPIC
-	MODE
-## MODE 세부 플래그
+## MODE 명령어 및 세부 플래그
+## INVITE
++i
+## JOIN
++i, +k, +l
+## TOPIC
++t
