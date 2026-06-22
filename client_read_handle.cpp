@@ -77,6 +77,12 @@ void env::handle_commands(int cs, const std::string& cmd_line)
 
 	else if (cmd_line.find("MODE") == 0)
         handle_command_mode(cs, cmd_line);
+	else if (cmd_line.find("PING") == 0)
+	{
+		// PING 뒤에 오는 서버 이름 정보(예: :ircserv)를 그대로 추출해서 PONG 뒤에 붙여 돌려줍니다.
+		std::string pong_msg = "PONG " + cmd_line.substr(4) + "\r\n";
+		fds[cs].buf_write += pong_msg;
+	}
 }
 /**
  * @brief PASS 명령어를 처리하여 클라이언트의 비밀번호 인증을 수행합니다.
@@ -1149,6 +1155,6 @@ void env::handle_command_mode(int cs, const std::string& cmd_line)
 	{
 		int member_fd = members[i];
 		fds[member_fd].buf_write += mode_packet;
-		client_write(member_fd); // 실시간 반영 플러시
+		//client_write(member_fd); // 실시간 반영 플러시
 	}
 }
