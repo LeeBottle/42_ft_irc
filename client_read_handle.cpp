@@ -74,6 +74,9 @@ void env::handle_commands(int cs, const std::string& cmd_line)
 	{
 		handle_command_topic(cs, cmd_line);
 	}
+
+	else if (cmd_line.find("MODE") == 0)
+        handle_command_mode(cs, cmd_line);
 }
 /**
  * @brief PASS 명령어를 처리하여 클라이언트의 비밀번호 인증을 수행합니다.
@@ -387,11 +390,48 @@ void env::handle_command_join(int cs, const std::string& cmd_line)
 		
 		channels.insert(std::make_pair(ch_name, new_channel));
 	}
-	else
+else
 	{
-		// [기존 채널 입장 분기] 이미 존재하는 채널이면 구성원 리스트에만 추가
+		// [기존 채널 입장 분기] 이미 존재하는 채널이면 각종 모드 조건 체크 후 추가
+		Channel& channel = it->second;
+
+		// 1) i 모드 체크 (초대 전용 채널인지)
+		if (channel.is_invite_only() && !channel.is_invited(cs))
+		{
+			fds[cs].buf_write += ":ircserv 473 " + fds[cs].nickname + " " + ch_name + " :Cannot join channel (+i)\r\n";
+			return;
+		}
+
+		// 2) l 모드 체크 (인원 제한수 확인)
+		if (channel.get_max_users() != -1 && static_cast<long long>(channel.get_client_fds().size()) >= channel.get_max_users())
+		{
+			fds[cs].buf_write += ":ircserv 471 " + fds[cs].nickname + " " + ch_name + " :Cannot join channel (+l)\r\n";
+			return;
+		}
+
+		// 3) k 모드 체크 (비밀번호 확인)
+		if (!channel.get_key().empty())
+		{
+			// JOIN #채널 비밀번호 형식으로 들어왔을 때 비밀번호 파싱을 위해 cmd_line 활용
+			std::stringstream ss(cmd_line);
+			std::string cmd, target_ch, input_key;
+			ss >> cmd >> target_ch >> input_key;
+
+			if (input_key != channel.get_key())
+			{
+				fds[cs].buf_write += ":ircserv 475 " + fds[cs].nickname + " " + ch_name + " :Cannot join channel (+k)\r\n";
+				return;
+			}
+		}
+
 		std::cout << "Client #" << cs << " joining existing channel: " << ch_name << std::endl;
-		it->second.add_client(cs);
+		channel.add_client(cs);
+
+		// 입장에 성공했으므로 초대장 목록이 있다면 제거해 줍니다.
+		if (channel.is_invited(cs))
+		{
+			channel.remove_invite(cs);
+		}
 	}
 
 	// 5. 채널 입장 알림 패킷 생성 및 채널 내 모든 멤버에게 브로드캐스트
@@ -767,6 +807,10 @@ void env::handle_command_invite(int cs, const std::string& cmd_line)
 	                          + target_nick + " :" + ch_name + "\r\n";
 
 	// 8. 패킷 전송 처리
+	if (it != channels.end())
+	{
+		it->second.add_invite(target_fd); // 대상 유저의 fd를 채널 초대 목록에 추가!
+	}
 	fds[target_fd].buf_write += invite_packet; // 초대를 받는 당사자에게 전송
 	fds[cs].buf_write += ":ircserv 341 " + sender_nick + " " + target_nick + " " + ch_name + "\r\n"; // 발송자에게 성공 응답(341 RPL_INVITING)
 	
@@ -898,6 +942,11 @@ void env::handle_command_topic(int cs, const std::string& cmd_line)
 	}
 	else
 	{
+		if (channel.is_topic_op_only() && !channel.is_operator(cs))
+		{
+			fds[cs].buf_write += ":ircserv 482 " + sender_nick + " " + ch_name + " :You're not channel operator\r\n";
+			return;
+		}
 		// [변경 모드 분기] 채널 객체의 토픽 정보를 새 값으로 갱신
 		channel.set_topic(new_topic);
 
@@ -913,5 +962,193 @@ void env::handle_command_topic(int cs, const std::string& cmd_line)
 			client_write(member_fd); // 상단 타이틀바 실시간 갱신 처리를 위해 소켓에 즉시 쓰기
 		}
 		std::cout << "Client #" << cs << " changed topic of " << ch_name << " to: " << new_topic << std::endl;
+	}
+}
+
+void env::handle_command_mode(int cs, const std::string& cmd_line)
+{
+	std::string sender_nick = fds[cs].nickname;
+
+	// 1. 공백 기준 인자 파싱 (std::stringstream 활용)
+	std::stringstream ss(cmd_line);
+	std::string command, target, modes;
+	ss >> command >> target >> modes;
+
+	// 인자가 부족한 경우 (최소 채널명은 있어야 함)
+	if (target.empty())
+	{
+		fds[cs].buf_write += ":ircserv 461 " + sender_nick + " MODE :Not enough parameters\r\n";
+		return;
+	}
+
+	// 대상이 채널이 아닌 경우 (유저 MODE는 과제 범위 외이거나 단순 처리)
+	if (target[0] != '#' && target[0] != '&')
+	{
+		// 유저 MODE 요청은 IRC 클라이언트 호환성을 위해 무시하거나 에러 처리
+		return;
+	}
+
+	// 2. 채널 존재 여부 확인 (403 ERR_NOSUCHCHANNEL)
+	std::map<std::string, Channel>::iterator it = channels.find(target);
+	if (it == channels.end())
+	{
+		fds[cs].buf_write += ":ircserv 403 " + sender_nick + " " + target + " :No such channel\r\n";
+		return;
+	}
+
+	Channel& channel = it->second;
+
+	// 3. 단순 채널 모드 조회 분기 (인자 없이 "MODE #채널"만 쳤을 때)
+	if (modes.empty())
+	{
+		// 현재 켜져 있는 모드 문자열 조립
+		std::string active_modes = "+";
+		std::string mode_params = "";
+
+		if (channel.is_invite_only()) active_modes += "i";
+		if (channel.is_topic_op_only()) active_modes += "t";
+		if (!channel.get_key().empty()) {
+			active_modes += "k";
+			mode_params += " " + channel.get_key();
+		}
+		if (channel.get_max_users() != -1) {
+			active_modes += "l";
+			std::stringstream l_ss;
+			l_ss << channel.get_max_users();
+			mode_params += " " + l_ss.str();
+		}
+
+		if (active_modes == "+") active_modes = "+n"; // 기본 모드 표시
+
+		fds[cs].buf_write += ":ircserv 324 " + sender_nick + " " + target + " " + active_modes + mode_params + "\r\n";
+		return;
+	}
+
+	// 4. 권한 확인: 모드를 변경하려면 채널 오퍼레이터여야 함 (482 ERR_CHANOPRIVSNEEDED)
+	if (channel.is_operator(cs) == false)
+	{
+		fds[cs].buf_write += ":ircserv 482 " + sender_nick + " " + target + " :You're not channel operator\r\n";
+		return;
+	}
+
+	// 5. 플래그 문자열 파싱 루프
+	bool sign = true; // true = '+', false = '-'
+	std::string applied_modes = "";
+	std::string applied_params = "";
+
+	for (size_t i = 0; i < modes.length(); ++i)
+	{
+		char flag = modes[i];
+
+		if (flag == '+') {
+			sign = true;
+			if (applied_modes.empty() || applied_modes[applied_modes.length() - 1] != '+')
+				applied_modes += "+";
+			continue;
+		}
+		else if (flag == '-') {
+			sign = false;
+			if (applied_modes.empty() || applied_modes[applied_modes.length() - 1] != '-')
+				applied_modes += "-";
+			continue;
+		}
+
+		// 인자가 없는 모드 처리 (i, t)
+		if (flag == 'i')
+		{
+			channel.set_invite_only(sign);
+			applied_modes += "i";
+		}
+		else if (flag == 't')
+		{
+			channel.set_topic_op_only(sign);
+			applied_modes += "t";
+		}
+		// 인자가 필요한 모드 처리 (k, l, o)
+		else if (flag == 'k' || flag == 'l' || flag == 'o')
+		{
+			std::string param;
+			ss >> param;
+
+			// '+' 상태인데 다음 인자가 없으면 에러 (단, -k는 인자가 없거나 상관없음)
+			if (param.empty() && !(flag == 'k' && sign == false))
+			{
+				fds[cs].buf_write += ":ircserv 461 " + sender_nick + " MODE :Not enough parameters\r\n";
+				continue;
+			}
+
+			if (flag == 'k') // 비밀번호 설정/해제
+			{
+				if (sign) {
+					channel.set_key(param);
+					applied_modes += "k";
+					applied_params += " " + param;
+				} else {
+					channel.set_key("");
+					applied_modes += "k";
+				}
+			}
+			else if (flag == 'l') // 인원 제한 설정/해제
+			{
+				if (sign) {
+					long long limit = std::atoll(param.c_str());
+					if (limit >= 0) {
+						channel.set_max_users(limit);
+						applied_modes += "l";
+						applied_params += " " + param;
+					}
+				} else {
+					channel.set_max_users(-1);
+					applied_modes += "l";
+				}
+			}
+			else if (flag == 'o') // 오퍼레이터 권한 부여/박탈
+			{
+				// 대상 유저닉네임으로 FD 찾기
+				int target_fd = -1;
+				for (size_t f = 0; f < fds.size(); ++f) {
+					if (fds[f].type == FD_CLIENT && fds[f].nickname == param) {
+						target_fd = static_cast<int>(f);
+						break;
+					}
+				}
+
+				if (target_fd == -1 || !channel.is_member(target_fd)) {
+					fds[cs].buf_write += ":ircserv 441 " + sender_nick + " " + param + " " + target + " :They aren't on that channel\r\n";
+					continue;
+				}
+
+				if (sign) {
+					channel.add_operator(target_fd);
+				} else {
+					channel.remove_operator(target_fd);
+				}
+				applied_modes += "o";
+				applied_params += " " + param;
+			}
+		}
+		else
+		{
+			// 알 수 없는 플래그 에러 처리 (472 ERR_UNKNOWNMODE)
+			std::string unknown_flag(1, flag);
+			fds[cs].buf_write += ":ircserv 472 " + sender_nick + " " + unknown_flag + " :is unknown mode char to me\r\n";
+		}
+	}
+
+	// 의미 없는 부호 제거 정제 (예: "+" 나 "-" 만 남는 것 방지)
+	if (applied_modes == "+" || applied_modes == "-") {
+		return;
+	}
+
+	// 6. 변경 성공 시 채널 내 모든 멤버에게 브로드캐스트
+	std::string mode_packet = ":" + sender_nick + "!" + fds[cs].username + "@127.0.0.1 MODE "
+	                        + target + " " + applied_modes + applied_params + "\r\n";
+
+	std::vector<int> members = channel.get_client_fds();
+	for (size_t i = 0; i < members.size(); ++i)
+	{
+		int member_fd = members[i];
+		fds[member_fd].buf_write += mode_packet;
+		client_write(member_fd); // 실시간 반영 플러시
 	}
 }

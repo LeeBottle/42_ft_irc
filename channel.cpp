@@ -1,9 +1,15 @@
 #include "channel.hpp"
 #include <algorithm>
 
-Channel::Channel() : _name(""), _topic("") {}
+Channel::Channel() 
+  : _name(""), _topic(""), _mode_invite_only(false), _mode_topic_op_only(false), _key(""), _max_users(-1)
+{
+}
 
-Channel::Channel(const std::string& name) : _name(name), _topic("") {}
+Channel::Channel(const std::string& name) 
+  : _name(name), _topic(""), _mode_invite_only(false), _mode_topic_op_only(false), _key(""), _max_users(-1)
+{
+}
 
 Channel::~Channel() {}
 
@@ -104,4 +110,41 @@ bool Channel::is_operator(int fd) const
 		}
 	}
 	return false;
+}
+
+// i 모드 Getter / Setter
+bool Channel::is_invite_only() const { return _mode_invite_only; }
+void Channel::set_invite_only(bool on) { _mode_invite_only = on; }
+
+// t 모드 Getter / Setter
+bool Channel::is_topic_op_only() const { return _mode_topic_op_only; }
+void Channel::set_topic_op_only(bool on) { _mode_topic_op_only = on; }
+
+// k 모드 Getter / Setter
+std::string Channel::get_key() const { return _key; }
+void Channel::set_key(const std::string& key) { _key = key; }
+
+// l 모드 Getter / Setter
+long long Channel::get_max_users() const { return _max_users; }
+void Channel::set_max_users(long long limit) { _max_users = limit; }
+
+
+// 초대(Invite) 유저 관리 구현
+void Channel::add_invite(int fd)
+{
+    if (!is_invited(fd))
+        _invited_fds.push_back(fd);
+}
+
+void Channel::remove_invite(int fd)
+{
+    std::vector<int>::iterator it = std::find(_invited_fds.begin(), _invited_fds.end(), fd);
+    if (it != _invited_fds.end())
+        _invited_fds.erase(it);
+}
+
+bool Channel::is_invited(int fd) const
+{
+    std::vector<int>::const_iterator it = std::find(_invited_fds.begin(), _invited_fds.end(), fd);
+    return (it != _invited_fds.end());
 }

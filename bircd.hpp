@@ -111,6 +111,8 @@ public:
 	void    handle_command_invite(int cs, const std::string& cmd_line);
 	void    handle_command_topic(int cs, const std::string& cmd_line);
 
+	void    handle_command_mode(int cs, const std::string& cmd_line);
+
 	void	client_write(int cs);
 	
 	//
