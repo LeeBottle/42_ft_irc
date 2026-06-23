@@ -22,7 +22,7 @@ int parsePort(std::string inputPort)
         ++i;
     }
 
-    if (port == 0)
+    if (port == 0)  // Port 0 is used that kernel allocates ramdom port to client object
         return (-1);
 
     return (port);
@@ -36,7 +36,7 @@ bool    validatePassword(const std::string &password)
     if (password.find('\0') != std::string::npos
         || password.find('\r') != std::string::npos
         || password.find('\n') != std::string::npos)
-    return (false);
+        return (false);
 
     return (true);
 }
