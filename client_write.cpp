@@ -23,10 +23,10 @@ void	env::client_write(int cs)
 			return;
 		}
 
-		
 		fds[cs].buf_write.erase(0, sent);
 	}
 
+	// 데이터 전송 완료 후 최종 상태 점검
 	if (fds[cs].buf_write.empty())
 	{
 		if (fds[cs].close_after_write)
@@ -37,5 +37,8 @@ void	env::client_write(int cs)
 			fds[cs].clean_fd();
 			return;
 		}
+		
+		//버퍼가 완전히 비었으므로 EPOLLOUT(쓰기감시)을 끄고 EPOLLIN(읽기)
+		epoll_mod(cs, EPOLLIN);
 	}
 }

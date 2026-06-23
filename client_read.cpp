@@ -70,6 +70,6 @@ void	env::client_read(int cs)
 	}
 	if (!fds[cs].buf_write.empty() || fds[cs].close_after_write)
 	{
-		client_write(cs);
+		epoll_mod(cs, EPOLLIN | EPOLLOUT);
 	}
 }
