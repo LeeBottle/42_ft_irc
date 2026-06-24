@@ -9,7 +9,10 @@ OBJ_DIR = obj
 
 SRCS = main.cpp	\
 	   Server.cpp	\
-	   Client.cpp
+	   ServerConnection.cpp	\
+	   ServerMessageHandler.cpp	\
+	   Client.cpp	\
+	   Message.cpp
 	   
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
