@@ -28,16 +28,13 @@ void    ServerMessageHandler::receiveClient(ServerConnection &connection,
         {
             client->appendReceived(buffer,
                 static_cast<std::string::size_type>(received));
-            std::cout << "received " << received << " bytes from fd "
-                << clientFd << std::endl;
-            printReceivedData(clientFd, buffer,
-                static_cast<std::string::size_type>(received));
             processReceivedLines(connection, *client);
+            if (connection.findClient(clientFd) == NULL)
+                return ;
             continue ;
         }
         if (received == 0)
         {
-            std::cout << "client disconnected with fd " << clientFd << std::endl;
             connection.disconnectClient(clientFd);
         }
         else if (errno == EINTR)
@@ -51,26 +48,6 @@ void    ServerMessageHandler::receiveClient(ServerConnection &connection,
     }
 }
 
-void    ServerMessageHandler::printReceivedData(int clientFd, const char *data,
-    std::string::size_type length) const
-{
-    std::string::size_type index;
-
-    std::cout << "received data from fd " << clientFd << ": ";
-    index = 0;
-    while (index < length)
-    {
-        if (data[index] == '\r')
-            std::cout << "\\r";
-        else if (data[index] == '\n')
-            std::cout << "\\n";
-        else
-            std::cout << data[index];
-        ++index;
-    }
-    std::cout << std::endl;
-}
-
 void    ServerMessageHandler::processReceivedLines(ServerConnection &connection,
     Client &client)
 {
@@ -79,15 +56,15 @@ void    ServerMessageHandler::processReceivedLines(ServerConnection &connection,
 
     while (client.extractLine(line))
     {
+        const int clientFd = client.getFd();
+
         if (!message.parse(line))
         {
-            std::cout << "invalid message from fd " << client.getFd()
-                << std::endl;
             continue ;
         }
-        std::cout << "parsed message from fd " << client.getFd()
-            << ": " << message.getRaw() << std::endl;
         handleMessage(connection, client, message);
+        if (connection.findClient(clientFd) == NULL)
+            return ;
     }
 }
 
@@ -97,7 +74,15 @@ void    ServerMessageHandler::handleMessage(ServerConnection &connection,
 {
     const std::string command = toUpperCommand(message.getCommand());
 
-    if (command == "PASS")
+    if (command == "CAP")
+        handleCap(connection, client, message);
+    else if (command == "PING")
+        handlePing(connection, client, message);
+    else if (command == "PONG")
+        return ;
+    else if (command == "QUIT")
+        handleQuit(connection, client, message);
+    else if (command == "PASS")
         handlePass(connection, client, message);
     else if (command == "NICK")
         handleNick(connection, client, message);
@@ -105,8 +90,11 @@ void    ServerMessageHandler::handleMessage(ServerConnection &connection,
         handleUser(connection, client, message);
     else if (!client.isRegistered())
         sendReply(connection, client, ":ircserv 451 * :You have not registered");
+    else if (command == "PRIVMSG")
+        handlePrivmsg(connection, client, message);
     else
-        broadcastMessage(connection, client.getFd(), message);
+        sendReply(connection, client, ":ircserv 421 "
+            + getReplyTarget(client) + " " + command + " :Unknown command");
 }
 
 void    ServerMessageHandler::handlePass(ServerConnection &connection,
@@ -116,7 +104,8 @@ void    ServerMessageHandler::handlePass(ServerConnection &connection,
     if (client.isRegistered())
     {
         sendReply(connection, client, ":ircserv 462 "
-            + client.getNickname() + " :You may not reregister");
+            + client.getNickname()
+            + " :Unauthorized command (already registered)");
         return ;
     }
     if (message.getParameters().empty())
@@ -131,7 +120,6 @@ void    ServerMessageHandler::handlePass(ServerConnection &connection,
         return ;
     }
     client.setPasswordAccepted();
-    std::cout << "password accepted from fd " << client.getFd() << std::endl;
     tryRegister(connection, client);
 }
 
@@ -160,8 +148,6 @@ void    ServerMessageHandler::handleNick(ServerConnection &connection,
         return ;
     }
     client.setNickname(*nickname);
-    std::cout << "nickname set for fd " << client.getFd()
-        << ": " << *nickname << std::endl;
     tryRegister(connection, client);
 }
 
@@ -172,7 +158,8 @@ void    ServerMessageHandler::handleUser(ServerConnection &connection,
     if (client.isRegistered())
     {
         sendReply(connection, client, ":ircserv 462 "
-            + client.getNickname() + " :You may not reregister");
+            + client.getNickname()
+            + " :Unauthorized command (already registered)");
         return ;
     }
     if (message.getParameters().size() < 4)
@@ -182,9 +169,82 @@ void    ServerMessageHandler::handleUser(ServerConnection &connection,
         return ;
     }
     client.setUser(message.getParameters()[0], message.getParameters()[3]);
-    std::cout << "user set for fd " << client.getFd()
-        << ": " << client.getUsername() << std::endl;
     tryRegister(connection, client);
+}
+
+void    ServerMessageHandler::handlePrivmsg(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    const std::vector<std::string> &params = message.getParameters();
+    Client                         *targetClient;
+    std::string                    wireMessage;
+
+    if (params.empty())
+    {
+        sendReply(connection, client, ":ircserv 411 "
+            + getReplyTarget(client) + " :No recipient given (PRIVMSG)");
+        return ;
+    }
+    if (params.size() < 2 || params[1].empty())
+    {
+        sendReply(connection, client, ":ircserv 412 "
+            + getReplyTarget(client) + " :No text to send");
+        return ;
+    }
+    targetClient = findClientByNickname(connection, params[0]);
+    if (targetClient == NULL)
+    {
+        sendReply(connection, client, ":ircserv 401 "
+            + getReplyTarget(client) + " " + params[0]
+            + " :No such nick/channel");
+        return ;
+    }
+    wireMessage = ":" + makeClientPrefix(client) + " PRIVMSG "
+        + params[0] + " :" + params[1] + "\r\n";
+    targetClient->appendSend(wireMessage);
+    connection.enableClientWrite(targetClient->getFd());
+}
+
+void    ServerMessageHandler::handleCap(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    const std::vector<std::string> &params = message.getParameters();
+    std::string                    subcommand;
+    std::string                    target;
+
+    if (params.empty())
+        return ;
+    subcommand = toUpperCommand(params[0]);
+    target = getReplyTarget(client);
+    if (subcommand == "LS")
+        sendReply(connection, client, ":ircserv CAP " + target + " LS :");
+    else if (subcommand == "LIST")
+        sendReply(connection, client, ":ircserv CAP " + target + " LIST :");
+    else if (subcommand == "REQ")
+        sendReply(connection, client, ":ircserv CAP " + target + " NAK :");
+}
+
+void    ServerMessageHandler::handlePing(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    if (message.getParameters().empty())
+    {
+        sendReply(connection, client, ":ircserv 409 "
+            + getReplyTarget(client) + " :No origin specified");
+        return ;
+    }
+    sendReply(connection, client, "PONG :" + message.getParameters()[0]);
+}
+
+void    ServerMessageHandler::handleQuit(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    (void)message;
+    connection.disconnectClient(client.getFd());
 }
 
 void    ServerMessageHandler::tryRegister(ServerConnection &connection,
@@ -197,9 +257,8 @@ void    ServerMessageHandler::tryRegister(ServerConnection &connection,
         return ;
     client.setRegistered();
     sendReply(connection, client, ":ircserv 001 " + client.getNickname()
-        + " :Welcome to the IRC server");
-    std::cout << "client registered with fd " << client.getFd()
-        << ": " << client.getNickname() << std::endl;
+        + " :Welcome to the Internet Relay Network "
+        + makeClientPrefix(client));
 }
 
 void    ServerMessageHandler::sendReply(ServerConnection &connection,
@@ -260,28 +319,33 @@ std::string ServerMessageHandler::toUpperCommand(
     return (result);
 }
 
-void    ServerMessageHandler::broadcastMessage(ServerConnection &connection,
-    int senderFd,
-    const Message &message)
+Client  *ServerMessageHandler::findClientByNickname(
+    ServerConnection &connection,
+    const std::string &nickname) const
 {
     std::vector<Client *>::const_iterator it;
-    const std::string                     wireMessage = message.getRaw() + "\r\n";
-    std::size_t                           recipientCount;
 
-    recipientCount = 0;
     it = connection.getClients().begin();
     while (it != connection.getClients().end())
     {
-        if ((*it)->getFd() != senderFd)
-        {
-            (*it)->appendSend(wireMessage);
-            connection.enableClientWrite((*it)->getFd());
-            ++recipientCount;
-        }
+        if ((*it)->getNickname() == nickname)
+            return (*it);
         ++it;
     }
-    std::cout << "broadcast message from fd " << senderFd << " to "
-        << recipientCount << " clients: " << message.getRaw() << std::endl;
+    return (NULL);
+}
+
+std::string ServerMessageHandler::getReplyTarget(const Client &client) const
+{
+    if (client.hasNickname())
+        return (client.getNickname());
+    return ("*");
+}
+
+std::string ServerMessageHandler::makeClientPrefix(const Client &client) const
+{
+    return (client.getNickname() + "!" + client.getUsername()
+        + "@localhost");
 }
 
 void    ServerMessageHandler::sendToClient(ServerConnection &connection,
@@ -300,8 +364,6 @@ void    ServerMessageHandler::sendToClient(ServerConnection &connection,
         if (sent > 0)
         {
             client->removeSent(static_cast<std::string::size_type>(sent));
-            std::cout << "sent " << sent << " bytes to fd " << clientFd
-                << std::endl;
             continue ;
         }
         if (sent == -1 && errno == EINTR)

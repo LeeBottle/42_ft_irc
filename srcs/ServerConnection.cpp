@@ -73,7 +73,6 @@ void    ServerConnection::acceptClients()
         }
         setNonBlocking(clientFd);
         addClient(clientFd);
-        std::cout << "client connected with fd " << clientFd << std::endl;
     }
 }
 
@@ -98,7 +97,6 @@ void    ServerConnection::handleClientEvent(int clientFd, short revents)
         return ;
     if (revents & (POLLERR | POLLHUP | POLLNVAL))
     {
-        std::cout << "client disconnected with fd " << clientFd << std::endl;
         disconnectClient(clientFd);
     }
 }

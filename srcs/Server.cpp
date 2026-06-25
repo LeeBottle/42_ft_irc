@@ -27,7 +27,6 @@ void    Server::run()
     setNonBlocking(_serverFd);
     bindSocket();
     listenSocket();
-    std::cout << "server is listening on port " << _port << std::endl;
     ServerConnection connection(_serverFd, _password);
 
     connection.run();
