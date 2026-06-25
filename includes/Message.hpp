@@ -17,10 +17,10 @@ public:
 
     bool    parse(const std::string &);
 
-    const std::string&              getRaw() const;
-    const std::string&              getPrefix() const;
-    const std::string&              getCommand() const;
-    const std::vector<std::string>& getParameters() const;
+    const std::string   &getRaw() const;
+    const std::string   &getPrefix() const;
+    const std::string   &getCommand() const;
+    const std::vector<std::string> &getParameters() const;
 };
 
 #endif

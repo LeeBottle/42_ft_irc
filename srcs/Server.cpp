@@ -28,7 +28,7 @@ void    Server::run()
     bindSocket();
     listenSocket();
     std::cout << "server is listening on port " << _port << std::endl;
-    ServerConnection connection(_serverFd);
+    ServerConnection connection(_serverFd, _password);
 
     connection.run();
 }

@@ -10,22 +10,29 @@ class ServerConnection;
 
 class ServerMessageHandler
 {
-private:
-    ServerConnection &_connection;
-
 public:
-    ServerMessageHandler(ServerConnection &);
+    ServerMessageHandler();
 
-    void    receiveClient(int);
-    void    sendToClient(int);
+    void    receiveClient(ServerConnection &, int);
+    void    sendToClient(ServerConnection &, int);
 
 private:
-    ServerMessageHandler();
     ServerMessageHandler(const ServerMessageHandler &);
     ServerMessageHandler& operator=(const ServerMessageHandler &);
 
-    void    processReceivedLines(Client &);
-    void    broadcastMessage(int, const Message &);
+    void    printReceivedData(int, const char *, std::string::size_type) const;
+    void    processReceivedLines(ServerConnection &, Client &);
+    void    handleMessage(ServerConnection &, Client &, const Message &);
+    void    handlePass(ServerConnection &, Client &, const Message &);
+    void    handleNick(ServerConnection &, Client &, const Message &);
+    void    handleUser(ServerConnection &, Client &, const Message &);
+    void    tryRegister(ServerConnection &, Client &);
+    void    sendReply(ServerConnection &, Client &, const std::string &);
+    bool    isNicknameInUse(ServerConnection &, const Client &,
+                const std::string &) const;
+    bool    isValidNickname(const std::string &) const;
+    std::string toUpperCommand(const std::string &) const;
+    void    broadcastMessage(ServerConnection &, int, const Message &);
 };
 
 #endif

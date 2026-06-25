@@ -7,8 +7,9 @@
 #include <iostream>
 #include <sys/socket.h>
 
-ServerConnection::ServerConnection(int serverFd)
-    : _serverFd(serverFd), _pollFds(), _clients(), _messageHandler(*this)
+ServerConnection::ServerConnection(int serverFd, const std::string &password)
+    : _serverFd(serverFd), _password(password), _pollFds(), _clients(),
+    _messageHandler()
 {
     addPollFd(_serverFd, POLLIN);
 }
@@ -88,11 +89,11 @@ void    ServerConnection::addClient(int clientFd)
 void    ServerConnection::handleClientEvent(int clientFd, short revents)
 {
     if (revents & POLLIN)
-        _messageHandler.receiveClient(clientFd);
+        _messageHandler.receiveClient(*this, clientFd);
     if (findClient(clientFd) == NULL)
         return ;
     if (revents & POLLOUT)
-        _messageHandler.sendToClient(clientFd);
+        _messageHandler.sendToClient(*this, clientFd);
     if (findClient(clientFd) == NULL)
         return ;
     if (revents & (POLLERR | POLLHUP | POLLNVAL))
@@ -167,6 +168,11 @@ Client  *ServerConnection::findClient(int clientFd)
 const std::vector<Client *> &ServerConnection::getClients() const
 {
     return (_clients);
+}
+
+const std::string   &ServerConnection::getPassword() const
+{
+    return (_password);
 }
 
 void    ServerConnection::enableClientWrite(int clientFd)

@@ -5,22 +5,25 @@
 # include "ServerMessageHandler.hpp"
 
 # include <poll.h>
+# include <string>
 # include <vector>
 
 class ServerConnection
 {
 private:
     int                         _serverFd;
+    const std::string           _password;
     std::vector<struct pollfd>  _pollFds;
     std::vector<Client *>       _clients;
     ServerMessageHandler        _messageHandler;
 
 public:
-    ServerConnection(int);
+    ServerConnection(int, const std::string &);
     ~ServerConnection();
 
     void    run();
     Client  *findClient(int);
+    const std::string   &getPassword() const;
     const std::vector<Client *> &getClients() const;
     void    enableClientWrite(int);
     void    disableClientWrite(int);
