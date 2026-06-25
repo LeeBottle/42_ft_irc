@@ -2,6 +2,23 @@
 
 void env::handle_commands(int cs, const std::string& cmd_line)
 {
+	if (cmd_line.empty())
+		return;
+	
+	std::string upper_cmd = "";
+	size_t first_space = 0;
+	
+	while (first_space < cmd_line.length() && cmd_line[first_space] != ' ' && cmd_line[first_space] != '\t')
+	{
+		first_space++;
+	}
+	
+	upper_cmd = cmd_line.substr(0, first_space);
+	for (size_t i = 0; i < upper_cmd.length(); ++i)
+	{
+		upper_cmd[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(upper_cmd[i])));
+	}
+
 	if (cmd_line.find("CAP") == 0)
 	{
 		if (fds[cs].type != FD_CLIENT)
@@ -76,11 +93,11 @@ void env::handle_commands(int cs, const std::string& cmd_line)
 	}
 
 	else if (cmd_line.find("MODE") == 0)
-        handle_command_mode(cs, cmd_line);
+		handle_command_mode(cs, cmd_line);
 	else if (cmd_line.find("PING") == 0)
 	{
 		// PING 뒤에 오는 서버 이름 정보(예: :ircserv)를 그대로 추출해서 PONG 뒤에 붙여 돌려줍니다.
-		std::string pong_msg = "PONG " + cmd_line.substr(4) + "\r\n";
+		std::string pong_msg = ":ircserv PONG " + cmd_line.substr(4) + "\r\n";
 		fds[cs].buf_write += pong_msg;
 	}
 }
@@ -101,7 +118,7 @@ void env::handle_command_pass(int cs, const std::string& cmd_line)
 
 	// 2. "PASS" 명령어 이후의 공백 문자 스킵 (인자 시작 위치 찾기)
 	size_t idx = 4;
-	while (idx < cmd_line.length() && std::isspace(static_cast<unsigned char>(cmd_line[idx])))
+	if (idx < cmd_line.length() && std::isspace(static_cast<unsigned char>(cmd_line[idx])))
 	{
 		idx++;
 	}
@@ -194,6 +211,13 @@ void env::handle_command_nick(int cs, const std::string& cmd_line)
 			}
 		}
 	}
+	if (!is_valid)
+	{
+		std::cout << "Erroneous Nickname: '" << new_nick << "' from Client #" << cs << std::endl;
+		std::string err_nick = new_nick.empty() ? "*" : new_nick;
+		fds[cs].buf_write += ":ircserv 432 " + err_nick + " :Erroneous nickname\r\n";
+		return; 
+	}
 
 	// 5. 서버 내 다른 클라이언트와의 닉네임 중복 검사
 	for (size_t i = 0; i < fds.size(); ++i)
@@ -246,6 +270,28 @@ void env::handle_command_user(int cs, const std::string& cmd_line)
 {
 	if (cmd_line.size() <= 4)
 		return;
+
+	// 0. 인자 갯수 4개인지 확인
+	std::stringstream ss(cmd_line);
+	std::string cmd, arg1, arg2, arg3, arg4;
+	ss >> cmd >> arg1 >> arg2 >> arg3 >> arg4;
+
+	// arg4가 비어있다는 것은 'USER' 단어를 제외하고 인자가 4개 미만으로 들어왔다는 뜻입니다.
+	if (arg4.empty())
+	{
+		std::cout << "Client #" << cs << " USER auth failed: Not enough parameters." << std::endl;
+		
+		// 클라이언트의 닉네임이 비어있다면 '*'로 안전하게 대체 (삼항 연산자 금지 반영)
+		std::string client_nick = fds[cs].nickname;
+		if (client_nick.empty())
+		{
+			client_nick = "*";
+		}
+
+		// 461 ERR_NEEDMOREPARAMS 패킷을 생성하여 출력 버퍼에 누적합니다.
+		fds[cs].buf_write += ":ircserv 461 " + client_nick + " USER :Not enough parameters\r\n";
+		return;
+	}
 
 	// 1. "USER" 이후의 공백 문자 스킵
 	size_t start = 4;
@@ -301,7 +347,7 @@ void env::handle_command_privmsg(int cs, const std::string& cmd_line)
 	// 메시지 수신 대상(Target)이 없는 경우 (411 ERR_NORECIPIENT)
 	if (idx >= cmd_line.length())
 	{
-		fds[cs].buf_write += ":ircserv 411 " + (fds[cs].nickname.empty() ? "*" : fds[cs].nickname) + " :No recipient given (PRIVMSG)\r\n";
+		fds[cs].buf_write += ":ircserv 411 " + (fds[cs].nickname.empty() ? "*" : fds[cs].nickname) + " :No recipient given\r\n";
 		return;
 	}
 
@@ -376,12 +422,30 @@ void env::handle_command_join(int cs, const std::string& cmd_line)
 	}
 	
 	// 3. 채널명 유효성 검사 (IRC 표준에 따라 # 또는 &로 시작해야 함)
-	if (ch_name[0] != '#' && ch_name[0] != '&')
+	if (ch_name.length() < 2 || ch_name[0] != '#' && ch_name[0] != '&')
 	{
 		fds[cs].buf_write += ":ircserv 403 " + fds[cs].nickname + " " + ch_name + " :No such channel\r\n";
 		return;
 	}
-
+	std::string input_key = "";
+	if (idx < cmd_line.length())
+	{
+		// 채널 이름 바로 뒤의 '첫 번째 공백 하나'만 스킵합니다.
+		if (std::isspace(static_cast<unsigned char>(cmd_line[idx])))
+		{
+			idx++;
+		}
+		// 그 뒤에 남아있는 문자열 전체를 input_key로 취급하여 공백을 온전히 보존합니다.
+		if (idx < cmd_line.length())
+		{
+			input_key = cmd_line.substr(idx);
+			// 문자열 끝에 혹시 모를 개행(\r, \n)이 붙어있다면 잘라내 줍니다.
+			while (!input_key.empty() && (input_key[input_key.length() - 1] == '\r' || input_key[input_key.length() - 1] == '\n'))
+			{
+				input_key.erase(input_key.length() - 1);
+			}
+		}
+	}
 	// 4. 서버 내부 채널 맵 목록에서 해당 채널이 존재하는지 조회
 	std::map<std::string, Channel>::iterator it = channels.find(ch_name);
 	
@@ -396,7 +460,7 @@ void env::handle_command_join(int cs, const std::string& cmd_line)
 		
 		channels.insert(std::make_pair(ch_name, new_channel));
 	}
-else
+	else
 	{
 		// [기존 채널 입장 분기] 이미 존재하는 채널이면 각종 모드 조건 체크 후 추가
 		Channel& channel = it->second;
@@ -453,6 +517,32 @@ else
 			fds[target_fd].buf_write += join_notif; // 다른 멤버들에게 전송
 		}
 	}
+
+	Channel& channel = channels[ch_name];
+	std::string active_modes = "+";
+	std::string mode_params = "";
+
+	if (channel.is_invite_only())
+		active_modes += "i";
+	if (channel.is_topic_op_only())
+		active_modes += "t";
+	if (!channel.get_key().empty())
+	{
+		active_modes += "k";
+		mode_params += " " + channel.get_key();
+	}
+	if (channel.get_max_users() != -1)
+	{
+		active_modes += "l";
+		std::stringstream l_ss;
+		l_ss << channel.get_max_users();
+		mode_params += " " + l_ss.str();
+	}
+	if (active_modes == "+")
+		active_modes = "+n"; // 기본 모드 플래그 설정
+
+	// 324 규격 패킷을 본인 출력 버퍼에 추가합니다.
+	fds[cs].buf_write += ":ircserv 324 " + fds[cs].nickname + " " + ch_name + " " + active_modes + mode_params + "\r\n";
 
 	// 6. 입장한 채널의 토픽 상태 안내 (331 RPL_NOTOPIC 또는 332 RPL_TOPIC)
 	std::string current_topic = channels[ch_name].get_topic();
@@ -557,6 +647,28 @@ void env::handle_command_part(int cs, const std::string& cmd_line)
 	{
 		std::cout << "Channel " << ch_name << " is now empty. Dissolving channel resource." << std::endl;
 		channels.erase(it);
+	}
+	else
+	{
+		// 채널에 인원이 남아있는데, 방장이 나가서 오퍼레이터 목록이 텅 빈 경우 권한을 위임
+		if (channel.get_operator_fds().empty())
+		{
+			// 남은 유저 목록 중 가장 첫 번째 유저(가장 먼저 들어와 있던 유저)를 새 오퍼레이터로 지정
+			int next_op_fd = remaining_members[0];
+			channel.add_operator(next_op_fd);
+			
+			std::cout << "Channel " << ch_name << " operator empty. Privilege transfer to Client #" << next_op_fd << " (" << fds[next_op_fd].nickname << ")" << std::endl;
+
+			// 실제 IRC 서버 규격에 맞게 오퍼레이터 임명 공지 패킷을 생성
+			std::string op_assign_packet = ":ircserv MODE " + ch_name + " +o " + fds[next_op_fd].nickname + "\r\n";
+			
+			// 변경된 권한 상태를 채널에 남은 모든 구성원들에게 실시간으로 브로드캐스트
+			for (size_t i = 0; i < remaining_members.size(); ++i)
+			{
+				int member_fd = remaining_members[i];
+				fds[member_fd].buf_write += op_assign_packet;
+			}
+		}
 	}
 }
 
@@ -674,21 +786,14 @@ void env::handle_command_kick(int cs, const std::string& cmd_line)
 
 	// 7. KICK 패킷 및 강제 퇴장 알림(PART) 패킷 생성
 	std::string kick_packet = ":" + sender_nick + "!" + fds[cs].username + "@127.0.0.1 KICK " + ch_name + " " + target_user + " :" + comment + "\r\n";
-	std::string forced_part_packet = ":" + target_user + "!" + fds[victim_fd].username + "@127.0.0.1 PART " + ch_name + " :Kicked by " + sender_nick + "\r\n";
 
 	// 8. 채널 내 모든 구성원에게 KICK 상태 전달 및 강제 플러시
 	std::vector<int> members = channel.get_client_fds();
 	for (size_t i = 0; i < members.size(); ++i)
 	{
 		int member_fd = members[i];
-		
-		// 당사자(Victim)에게는 방에서 쫓겨났음을 알리는 강제 PART 패킷도 함께 삽입
-		if (member_fd == victim_fd)
-		{
-			fds[member_fd].buf_write += forced_part_packet;
-		}
-		fds[member_fd].buf_write += kick_packet;
-		client_write(member_fd); // 중요 패킷이므로 소켓에 즉시 write 시도
+		fds[member_fd].buf_write += kick_packet; 
+		client_write(member_fd);
 	}
 
 	// 9. 채널 객체 내부에서 추방된 유저 완전 제거
@@ -809,8 +914,7 @@ void env::handle_command_invite(int cs, const std::string& cmd_line)
 	}
 
 	// 7. 초대장 수신을 위한 INVITE 패킷 조립
-	std::string invite_packet = ":" + sender_nick + "!" + safe_username + "@127.0.0.1 INVITE " 
-	                          + target_nick + " :" + ch_name + "\r\n";
+	std::string invite_packet = ":" + sender_nick + "!" + safe_username + "@127.0.0.1 INVITE " + target_nick + " :" + ch_name + "\r\n";
 
 	// 8. 패킷 전송 처리
 	if (it != channels.end())
@@ -914,11 +1018,11 @@ void env::handle_command_topic(int cs, const std::string& cmd_line)
 	}
 
 	// 4. 채널 소속 검사 유효성 체크
-	// 4-1. 해당 채널이 실제로 존재하는지 검사 (442 ERR_NOTONCHANNEL)
+	// 4-1. 해당 채널이 실제로 존재하는지 검사 (403 ERR_NOTONCHANNEL)
 	std::map<std::string, Channel>::iterator it = channels.find(ch_name);
 	if (it == channels.end())
 	{
-		fds[cs].buf_write += ":ircserv 442 " + sender_nick + " " + ch_name + " :You're not on that channel\r\n";
+		fds[cs].buf_write += ":ircserv 403 " + sender_nick + " " + ch_name + " :You're not on that channel\r\n";
 		return;
 	}
 
@@ -957,8 +1061,7 @@ void env::handle_command_topic(int cs, const std::string& cmd_line)
 		channel.set_topic(new_topic);
 
 		// 변경 알림 패킷을 조립하여 실시간 동기화를 위해 방 내부의 모든 멤버에게 전송
-		std::string topic_packet = ":" + sender_nick + "!" + safe_username + "@127.0.0.1 TOPIC " 
-		                         + ch_name + " :" + new_topic + "\r\n";
+		std::string topic_packet = ":" + sender_nick + "!" + safe_username + "@127.0.0.1 TOPIC " + ch_name + " :" + new_topic + "\r\n";
 
 		std::vector<int> members = channel.get_client_fds();
 		for (size_t i = 0; i < members.size(); ++i)
@@ -1096,14 +1199,21 @@ void env::handle_command_mode(int cs, const std::string& cmd_line)
 			}
 			else if (flag == 'l') // 인원 제한 설정/해제
 			{
-				if (sign) {
-					long long limit = std::atoll(param.c_str());
-					if (limit >= 0) {
+				if (sign)
+				{
+					std::stringstream ss(param);
+					long limit = 0;
+
+					// 스트림을 통해 변환이 성공했고, 값이 0 이상인 경우에만 처리
+					if (ss >> limit && limit >= 0)
+					{
 						channel.set_max_users(limit);
 						applied_modes += "l";
 						applied_params += " " + param;
 					}
-				} else {
+				}
+				else
+				{
 					channel.set_max_users(-1);
 					applied_modes += "l";
 				}
@@ -1147,8 +1257,7 @@ void env::handle_command_mode(int cs, const std::string& cmd_line)
 	}
 
 	// 6. 변경 성공 시 채널 내 모든 멤버에게 브로드캐스트
-	std::string mode_packet = ":" + sender_nick + "!" + fds[cs].username + "@127.0.0.1 MODE "
-	                        + target + " " + applied_modes + applied_params + "\r\n";
+	std::string mode_packet = ":" + sender_nick + "!" + fds[cs].username + "@127.0.0.1 MODE " + target + " " + applied_modes + applied_params + "\r\n";
 
 	std::vector<int> members = channel.get_client_fds();
 	for (size_t i = 0; i < members.size(); ++i)

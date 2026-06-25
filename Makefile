@@ -10,7 +10,7 @@ OBJS = ${SRCS:.cpp=.o}
 
 NAME = ircserv
 
-CFLAGS = -I. -g -std=c++98
+CFLAGS = -I. -Wall -Wextra -Werror -g -std=c++98
 
 LDFLAGS = 
 

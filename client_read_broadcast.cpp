@@ -47,10 +47,16 @@ void	env::broadcast_message(int sender_cs, const std::string& target, const std:
 	}
 	else
 	{
+		if (target == sender_nick)
+		{
+			return;
+		}
+
 		bool user_found = false;
 		for (size_t i = 0; i < fds.size(); ++i)
 		{
-			if (fds[i].type == FD_CLIENT && fds[i].nickname == target)
+			// 2. static_cast<int>(i) != sender_cs 조건을 추가하여 한 번 더 안전장치를 둡니다.
+			if (fds[i].type == FD_CLIENT && fds[i].nickname == target && static_cast<int>(i) != sender_cs)
 			{
 				fds[i].buf_write += formatted_packet;
 				user_found = true;

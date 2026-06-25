@@ -112,7 +112,7 @@ bool Channel::is_operator(int fd) const
 	return false;
 }
 
-// i 모드 Getter / Setter
+// i 모드 Getter /  
 bool Channel::is_invite_only() const { return _mode_invite_only; }
 void Channel::set_invite_only(bool on) { _mode_invite_only = on; }
 
