@@ -12,7 +12,8 @@ SRCS = main.cpp	\
 	   ServerConnection.cpp	\
 	   ServerMessageHandler.cpp	\
 	   Client.cpp	\
-	   Message.cpp
+	   Message.cpp	\
+	   Channel.cpp
 	   
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 

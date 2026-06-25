@@ -8,7 +8,21 @@
 #include <sys/socket.h>
 
 ServerMessageHandler::ServerMessageHandler()
+    : _channels()
 {
+}
+
+ServerMessageHandler::~ServerMessageHandler()
+{
+    std::vector<Channel *>::iterator it;
+
+    it = _channels.begin();
+    while (it != _channels.end())
+    {
+        delete *it;
+        ++it;
+    }
+    _channels.clear();
 }
 
 void    ServerMessageHandler::receiveClient(ServerConnection &connection,
@@ -92,6 +106,12 @@ void    ServerMessageHandler::handleMessage(ServerConnection &connection,
         sendReply(connection, client, ":ircserv 451 * :You have not registered");
     else if (command == "PRIVMSG")
         handlePrivmsg(connection, client, message);
+    else if (command == "JOIN")
+        handleJoin(connection, client, message);
+    else if (command == "PART")
+        handlePart(connection, client, message);
+    else if (command == "MODE")
+        handleMode(connection, client, message);
     else
         sendReply(connection, client, ":ircserv 421 "
             + getReplyTarget(client) + " " + command + " :Unknown command");
@@ -178,6 +198,7 @@ void    ServerMessageHandler::handlePrivmsg(ServerConnection &connection,
 {
     const std::vector<std::string> &params = message.getParameters();
     Client                         *targetClient;
+    Channel                        *targetChannel;
     std::string                    wireMessage;
 
     if (params.empty())
@@ -190,6 +211,21 @@ void    ServerMessageHandler::handlePrivmsg(ServerConnection &connection,
     {
         sendReply(connection, client, ":ircserv 412 "
             + getReplyTarget(client) + " :No text to send");
+        return ;
+    }
+    if (isChannelName(params[0]))
+    {
+        targetChannel = findChannel(params[0]);
+        if (targetChannel == NULL || !targetChannel->hasMember(&client))
+        {
+            sendReply(connection, client, ":ircserv 404 "
+                + getReplyTarget(client) + " " + params[0]
+                + " :Cannot send to channel");
+            return ;
+        }
+        wireMessage = ":" + makeClientPrefix(client) + " PRIVMSG "
+            + params[0] + " :" + params[1];
+        sendToChannel(connection, targetChannel, wireMessage, &client);
         return ;
     }
     targetClient = findClientByNickname(connection, params[0]);
@@ -265,6 +301,8 @@ void    ServerMessageHandler::sendReply(ServerConnection &connection,
     Client &client,
     const std::string &message)
 {
+    std::cout << "[SEND fd=" << client.getFd() << "] "
+        << message << "\\r\\n" << std::endl;
     client.appendSend(message + "\r\n");
     connection.enableClientWrite(client.getFd());
 }
@@ -348,6 +386,187 @@ std::string ServerMessageHandler::makeClientPrefix(const Client &client) const
         + "@localhost");
 }
 
+
+Channel *ServerMessageHandler::findChannel(const std::string &name) const
+{
+    std::vector<Channel *>::const_iterator it;
+
+    it = _channels.begin();
+    while (it != _channels.end())
+    {
+        if ((*it)->getName() == name)
+            return (*it);
+        ++it;
+    }
+    return (NULL);
+}
+
+Channel *ServerMessageHandler::getOrCreateChannel(const std::string &name)
+{
+    Channel *channel;
+
+    channel = findChannel(name);
+    if (channel != NULL)
+        return (channel);
+    channel = new Channel(name);
+    _channels.push_back(channel);
+    return (channel);
+}
+
+bool    ServerMessageHandler::isChannelName(const std::string &name) const
+{
+    return (!name.empty() && name[0] == '#');
+}
+
+void    ServerMessageHandler::sendToChannel(ServerConnection &connection,
+    Channel *channel,
+    const std::string &message,
+    Client *except)
+{
+    const std::vector<Client *>       &members = channel->getMembers();
+    std::vector<Client *>::const_iterator it;
+
+    it = members.begin();
+    while (it != members.end())
+    {
+        if (*it != except)
+            sendReply(connection, **it, message);
+        ++it;
+    }
+}
+
+std::string ServerMessageHandler::makeNamesList(Channel *channel) const
+{
+    const std::vector<Client *>       &members = channel->getMembers();
+    std::vector<Client *>::const_iterator it;
+    std::string                       names;
+
+    it = members.begin();
+    while (it != members.end())
+    {
+        if (!names.empty())
+            names += " ";
+        names += (*it)->getNickname();
+        ++it;
+    }
+    return (names);
+}
+
+void    ServerMessageHandler::sendNamesReply(ServerConnection &connection,
+    Client &client,
+    Channel *channel)
+{
+    std::string target;
+    std::string channelName;
+    std::string names;
+
+    target = getReplyTarget(client);
+    channelName = channel->getName();
+    names = makeNamesList(channel);
+    sendReply(connection, client, ":ircserv 353 " + target
+        + " = " + channelName + " :" + names);
+    sendReply(connection, client, ":ircserv 366 " + target
+        + " " + channelName + " :End of /NAMES list.");
+}
+
+void    ServerMessageHandler::handleJoin(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    const std::vector<std::string>    &params = message.getParameters();
+    std::string                       channelName;
+    Channel                           *channel;
+    std::string                       joinMessage;
+
+    if (params.empty())
+    {
+        sendReply(connection, client, ":ircserv 461 "
+            + getReplyTarget(client) + " JOIN :Not enough parameters");
+        return ;
+    }
+    channelName = params[0];
+    if (!isChannelName(channelName))
+    {
+        sendReply(connection, client, ":ircserv 403 "
+            + getReplyTarget(client) + " " + channelName
+            + " :No such channel");
+        return ;
+    }
+    channel = getOrCreateChannel(channelName);
+    if (!channel->hasMember(&client))
+    {
+        channel->addMember(&client);
+        joinMessage = ":" + makeClientPrefix(client) + " JOIN :"
+            + channelName;
+        sendToChannel(connection, channel, joinMessage, NULL);
+    }
+    sendNamesReply(connection, client, channel);
+}
+
+void    ServerMessageHandler::handlePart(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    const std::vector<std::string>    &params = message.getParameters();
+    std::string                       channelName;
+    Channel                           *channel;
+    std::string                       partMessage;
+
+    if (params.empty())
+    {
+        sendReply(connection, client, ":ircserv 461 "
+            + getReplyTarget(client) + " PART :Not enough parameters");
+        return ;
+    }
+    channelName = params[0];
+    channel = findChannel(channelName);
+    if (channel == NULL)
+    {
+        sendReply(connection, client, ":ircserv 403 "
+            + getReplyTarget(client) + " " + channelName
+            + " :No such channel");
+        return ;
+    }
+    if (!channel->hasMember(&client))
+    {
+        sendReply(connection, client, ":ircserv 442 "
+            + getReplyTarget(client) + " " + channelName
+            + " :You're not on that channel");
+        return ;
+    }
+    partMessage = ":" + makeClientPrefix(client) + " PART " + channelName + " :Leaving";
+    sendToChannel(connection, channel, partMessage, NULL);
+    channel->removeMember(&client);
+    deleteChannelIfEmpty(channel);
+}
+
+void    ServerMessageHandler::handleMode(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    (void)message;
+    sendReply(connection, client, ":ircserv 221 "
+        + getReplyTarget(client) + " +i");
+}
+
+void    ServerMessageHandler::removeClientFromChannels(Client &client)
+{
+    std::vector<Channel *>::iterator it;
+
+    it = _channels.begin();
+    while (it != _channels.end())
+    {
+        (*it)->removeMember(&client);
+        if ((*it)->isEmpty())
+        {
+            delete *it;
+            it = _channels.erase(it);
+        }
+        else
+            ++it;
+    }
+}
+
 void    ServerMessageHandler::sendToClient(ServerConnection &connection,
     int clientFd)
 {
@@ -375,4 +594,23 @@ void    ServerMessageHandler::sendToClient(ServerConnection &connection,
         return ;
     }
     connection.disableClientWrite(clientFd);
+}
+
+void    ServerMessageHandler::deleteChannelIfEmpty(Channel *channel)
+{
+    std::vector<Channel *>::iterator it;
+
+    if (channel == NULL || !channel->isEmpty())
+        return ;
+    it = _channels.begin();
+    while (it != _channels.end())
+    {
+        if (*it == channel)
+        {
+            delete *it;
+            _channels.erase(it);
+            return ;
+        }
+        ++it;
+    }
 }

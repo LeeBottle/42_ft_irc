@@ -192,6 +192,7 @@ void    ServerConnection::disconnectClient(int clientFd)
     {
         if ((*it)->getFd() == clientFd)
         {
+            _messageHandler.removeClientFromChannels(**it);
             delete *it;
             _clients.erase(it);
             removePollFd(clientFd);
