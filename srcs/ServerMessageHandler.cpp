@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <sys/socket.h>
 
 ServerMessageHandler::ServerMessageHandler()
@@ -365,6 +366,42 @@ std::string ServerMessageHandler::toUpperCommand(
     return (result);
 }
 
+bool    ServerMessageHandler::parseLimit(const std::string &text,
+    unsigned int &limit) const
+{
+    std::string::size_type index;
+    unsigned int           value;
+
+    if (text.empty())
+        return (false);
+    index = 0;
+    value = 0;
+    while (index < text.size())
+    {
+        if (text[index] < '0' || text[index] > '9')
+            return (false);
+        value = value * 10 + static_cast<unsigned int>(text[index] - '0');
+        if (value == 0 || value > 100000)
+            return (false);
+        ++index;
+    }
+    limit = value;
+    return (true);
+}
+
+void    ServerMessageHandler::addModeChange(std::string &modeChanges,
+    char &currentSign,
+    char sign,
+    char mode) const
+{
+    if (currentSign != sign)
+    {
+        modeChanges += sign;
+        currentSign = sign;
+    }
+    modeChanges += mode;
+}
+
 Client  *ServerMessageHandler::findClientByNickname(
     ServerConnection &connection,
     const std::string &nickname) const
@@ -454,6 +491,8 @@ std::string ServerMessageHandler::makeNamesList(Channel *channel) const
     {
         if (!names.empty())
             names += " ";
+        if (channel->hasOperator(*it))
+            names += "@";
         names += (*it)->getNickname();
         ++it;
     }
@@ -494,6 +533,34 @@ void    ServerMessageHandler::sendTopicReply(ServerConnection &connection,
             + " " + channelName + " :No topic is set");
 }
 
+void    ServerMessageHandler::sendChannelModeReply(ServerConnection &connection,
+    Client &client,
+    Channel *channel)
+{
+    std::string modes;
+    std::string params;
+    std::ostringstream limitStream;
+
+    modes = "+";
+    if (channel->isInviteOnly())
+        modes += "i";
+    if (channel->isTopicRestricted())
+        modes += "t";
+    if (channel->hasKey())
+    {
+        modes += "k";
+        params += " " + channel->getKey();
+    }
+    if (channel->hasLimit())
+    {
+        modes += "l";
+        limitStream << channel->getLimit();
+        params += " " + limitStream.str();
+    }
+    sendReply(connection, client, ":ircserv 324 " + getReplyTarget(client)
+        + " " + channel->getName() + " " + modes + params);
+}
+
 void    ServerMessageHandler::handleJoin(ServerConnection &connection,
     Client &client,
     const Message &message)
@@ -502,6 +569,7 @@ void    ServerMessageHandler::handleJoin(ServerConnection &connection,
     std::string                       channelName;
     Channel                           *channel;
     std::string                       joinMessage;
+    bool                              firstMember;
 
     if (params.empty())
     {
@@ -518,9 +586,37 @@ void    ServerMessageHandler::handleJoin(ServerConnection &connection,
         return ;
     }
     channel = getOrCreateChannel(channelName);
+    firstMember = channel->isEmpty();
+    if (!channel->hasMember(&client) && !firstMember && channel->isInviteOnly()
+        && !channel->hasInvitation(&client))
+    {
+        sendReply(connection, client, ":ircserv 473 "
+            + getReplyTarget(client) + " " + channelName
+            + " :Cannot join channel (+i)");
+        return ;
+    }
+    if (!channel->hasMember(&client) && !firstMember && channel->hasKey()
+        && (params.size() < 2 || params[1] != channel->getKey()))
+    {
+        sendReply(connection, client, ":ircserv 475 "
+            + getReplyTarget(client) + " " + channelName
+            + " :Cannot join channel (+k)");
+        return ;
+    }
+    if (!channel->hasMember(&client) && !firstMember && channel->hasLimit()
+        && channel->getMembers().size() >= channel->getLimit())
+    {
+        sendReply(connection, client, ":ircserv 471 "
+            + getReplyTarget(client) + " " + channelName
+            + " :Cannot join channel (+l)");
+        return ;
+    }
     if (!channel->hasMember(&client))
     {
         channel->addMember(&client);
+        if (firstMember)
+            channel->addOperator(&client);
+        channel->removeInvitation(&client);
         joinMessage = ":" + makeClientPrefix(client) + " JOIN :"
             + channelName;
         sendToChannel(connection, channel, joinMessage, NULL);
@@ -603,6 +699,13 @@ void    ServerMessageHandler::handleTopic(ServerConnection &connection,
             + " :You're not on that channel");
         return ;
     }
+    if (channel->isTopicRestricted() && !channel->hasOperator(&client))
+    {
+        sendReply(connection, client, ":ircserv 482 "
+            + getReplyTarget(client) + " " + channelName
+            + " :You're not channel operator");
+        return ;
+    }
     channel->setTopic(params[1]);
     topicMessage = ":" + makeClientPrefix(client) + " TOPIC "
         + channelName + " :" + params[1];
@@ -647,6 +750,13 @@ void    ServerMessageHandler::handleInvite(ServerConnection &connection,
             + " :You're not on that channel");
         return ;
     }
+    if (!channel->hasOperator(&client))
+    {
+        sendReply(connection, client, ":ircserv 482 "
+            + getReplyTarget(client) + " " + params[1]
+            + " :You're not channel operator");
+        return ;
+    }
     if (channel->hasMember(targetClient))
     {
         sendReply(connection, client, ":ircserv 443 "
@@ -654,6 +764,7 @@ void    ServerMessageHandler::handleInvite(ServerConnection &connection,
             + " " + params[1] + " :is already on channel");
         return ;
     }
+    channel->addInvitation(targetClient);
     sendReply(connection, client, ":ircserv 341 " + getReplyTarget(client)
         + " " + targetClient->getNickname() + " " + params[1]);
     inviteMessage = ":" + makeClientPrefix(client) + " INVITE "
@@ -693,6 +804,13 @@ void    ServerMessageHandler::handleKick(ServerConnection &connection,
             + " :You're not on that channel");
         return ;
     }
+    if (!channel->hasOperator(&client))
+    {
+        sendReply(connection, client, ":ircserv 482 "
+            + getReplyTarget(client) + " " + params[0]
+            + " :You're not channel operator");
+        return ;
+    }
     targetClient = findClientByNickname(connection, params[1]);
     if (targetClient == NULL || !channel->hasMember(targetClient))
     {
@@ -715,9 +833,181 @@ void    ServerMessageHandler::handleMode(ServerConnection &connection,
     Client &client,
     const Message &message)
 {
-    (void)message;
-    sendReply(connection, client, ":ircserv 221 "
-        + getReplyTarget(client) + " +i");
+    const std::vector<std::string>    &params = message.getParameters();
+    Channel                           *channel;
+    Client                            *targetClient;
+    std::string                       modeChanges;
+    std::string                       modeParams;
+    std::string                       modeString;
+    std::string::size_type            index;
+    std::string::size_type            paramIndex;
+    unsigned int                      limit;
+    char                              sign;
+    char                              currentSign;
+
+    if (params.empty())
+    {
+        sendReply(connection, client, ":ircserv 461 "
+            + getReplyTarget(client) + " MODE :Not enough parameters");
+        return ;
+    }
+    if (!isChannelName(params[0]))
+    {
+        sendReply(connection, client, ":ircserv 221 "
+            + getReplyTarget(client) + " +i");
+        return ;
+    }
+    channel = findChannel(params[0]);
+    if (channel == NULL)
+    {
+        sendReply(connection, client, ":ircserv 403 "
+            + getReplyTarget(client) + " " + params[0]
+            + " :No such channel");
+        return ;
+    }
+    if (params.size() == 1)
+    {
+        sendChannelModeReply(connection, client, channel);
+        return ;
+    }
+    if (!channel->hasMember(&client))
+    {
+        sendReply(connection, client, ":ircserv 442 "
+            + getReplyTarget(client) + " " + params[0]
+            + " :You're not on that channel");
+        return ;
+    }
+    if (!channel->hasOperator(&client))
+    {
+        sendReply(connection, client, ":ircserv 482 "
+            + getReplyTarget(client) + " " + params[0]
+            + " :You're not channel operator");
+        return ;
+    }
+    modeString = params[1];
+    index = 0;
+    paramIndex = 2;
+    sign = '+';
+    currentSign = '\0';
+    while (index < modeString.size())
+    {
+        if (modeString[index] == '+' || modeString[index] == '-')
+            sign = modeString[index];
+        else if (modeString[index] == 'i')
+        {
+            if (sign == '+' && !channel->isInviteOnly())
+            {
+                channel->setInviteOnly(true);
+                addModeChange(modeChanges, currentSign, sign, 'i');
+            }
+            else if (sign == '-' && channel->isInviteOnly())
+            {
+                channel->setInviteOnly(false);
+                addModeChange(modeChanges, currentSign, sign, 'i');
+            }
+        }
+        else if (modeString[index] == 't')
+        {
+            if (sign == '+' && !channel->isTopicRestricted())
+            {
+                channel->setTopicRestricted(true);
+                addModeChange(modeChanges, currentSign, sign, 't');
+            }
+            else if (sign == '-' && channel->isTopicRestricted())
+            {
+                channel->setTopicRestricted(false);
+                addModeChange(modeChanges, currentSign, sign, 't');
+            }
+        }
+        else if (modeString[index] == 'k')
+        {
+            if (sign == '+')
+            {
+                if (paramIndex >= params.size() || params[paramIndex].empty())
+                {
+                    sendReply(connection, client, ":ircserv 461 "
+                        + getReplyTarget(client)
+                        + " MODE :Not enough parameters");
+                    return ;
+                }
+                channel->setKey(params[paramIndex]);
+                addModeChange(modeChanges, currentSign, sign, 'k');
+                modeParams += " " + params[paramIndex];
+                ++paramIndex;
+            }
+            else if (channel->hasKey())
+            {
+                channel->clearKey();
+                addModeChange(modeChanges, currentSign, sign, 'k');
+            }
+        }
+        else if (modeString[index] == 'l')
+        {
+            if (sign == '+')
+            {
+                if (paramIndex >= params.size()
+                    || !parseLimit(params[paramIndex], limit))
+                {
+                    sendReply(connection, client, ":ircserv 461 "
+                        + getReplyTarget(client)
+                        + " MODE :Not enough parameters");
+                    return ;
+                }
+                channel->setLimit(limit);
+                addModeChange(modeChanges, currentSign, sign, 'l');
+                modeParams += " " + params[paramIndex];
+                ++paramIndex;
+            }
+            else if (channel->hasLimit())
+            {
+                channel->clearLimit();
+                addModeChange(modeChanges, currentSign, sign, 'l');
+            }
+        }
+        else if (modeString[index] == 'o')
+        {
+            if (paramIndex >= params.size())
+            {
+                sendReply(connection, client, ":ircserv 461 "
+                    + getReplyTarget(client)
+                    + " MODE :Not enough parameters");
+                return ;
+            }
+            targetClient = findClientByNickname(connection, params[paramIndex]);
+            if (targetClient == NULL || !channel->hasMember(targetClient))
+            {
+                sendReply(connection, client, ":ircserv 441 "
+                    + getReplyTarget(client) + " " + params[paramIndex]
+                    + " " + params[0]
+                    + " :They aren't on that channel");
+                return ;
+            }
+            if (sign == '+' && !channel->hasOperator(targetClient))
+            {
+                channel->addOperator(targetClient);
+                addModeChange(modeChanges, currentSign, sign, 'o');
+                modeParams += " " + targetClient->getNickname();
+            }
+            else if (sign == '-' && channel->hasOperator(targetClient))
+            {
+                channel->removeOperator(targetClient);
+                addModeChange(modeChanges, currentSign, sign, 'o');
+                modeParams += " " + targetClient->getNickname();
+            }
+            ++paramIndex;
+        }
+        else
+        {
+            sendReply(connection, client, ":ircserv 472 "
+                + getReplyTarget(client) + " " + modeString[index]
+                + " :is unknown mode char to me");
+            return ;
+        }
+        ++index;
+    }
+    if (!modeChanges.empty())
+        sendToChannel(connection, channel, ":" + makeClientPrefix(client)
+            + " MODE " + params[0] + " " + modeChanges + modeParams, NULL);
 }
 
 void    ServerMessageHandler::handleWho(ServerConnection &connection, Client &client, const Message &message)
@@ -762,6 +1052,7 @@ void    ServerMessageHandler::removeClientFromChannels(Client &client)
     it = _channels.begin();
     while (it != _channels.end())
     {
+        (*it)->removeInvitation(&client);
         (*it)->removeMember(&client);
         if ((*it)->isEmpty())
         {

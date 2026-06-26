@@ -56,7 +56,10 @@ private:
                 const std::string &, Client *);
     void    sendNamesReply(ServerConnection &, Client &, Channel *);
     void    sendTopicReply(ServerConnection &, Client &, Channel *);
+    void    sendChannelModeReply(ServerConnection &, Client &, Channel *);
     std::string makeNamesList(Channel *) const;
+    bool    parseLimit(const std::string &, unsigned int &) const;
+    void    addModeChange(std::string &, char &, char, char) const;
     bool    isValidNickname(const std::string &) const;
     std::string getReplyTarget(const Client &) const;
     std::string makeClientPrefix(const Client &) const;
