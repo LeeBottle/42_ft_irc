@@ -1,22 +1,19 @@
 #include "bircd.hpp"
 
-void env::handle_commands(int cs, const std::string& cmd_line)
+void env::handle_commands(int cs, std::string cmd_line)
 {
 	if (cmd_line.empty())
 		return;
 	
-	std::string upper_cmd = "";
 	size_t first_space = 0;
-	
 	while (first_space < cmd_line.length() && cmd_line[first_space] != ' ' && cmd_line[first_space] != '\t')
 	{
 		first_space++;
 	}
 	
-	upper_cmd = cmd_line.substr(0, first_space);
-	for (size_t i = 0; i < upper_cmd.length(); ++i)
+	for (size_t i = 0; i < first_space; ++i)
 	{
-		upper_cmd[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(upper_cmd[i])));
+		cmd_line[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(cmd_line[i])));
 	}
 
 	if (cmd_line.find("CAP") == 0)
@@ -793,7 +790,7 @@ void env::handle_command_kick(int cs, const std::string& cmd_line)
 	{
 		int member_fd = members[i];
 		fds[member_fd].buf_write += kick_packet; 
-		client_write(member_fd);
+		//client_write(member_fd);
 	}
 
 	// 9. 채널 객체 내부에서 추방된 유저 완전 제거
@@ -925,8 +922,8 @@ void env::handle_command_invite(int cs, const std::string& cmd_line)
 	fds[cs].buf_write += ":ircserv 341 " + sender_nick + " " + target_nick + " " + ch_name + "\r\n"; // 발송자에게 성공 응답(341 RPL_INVITING)
 	
 	// 즉시 네트워크 버퍼 플러시
-	client_write(target_fd);
-	client_write(cs);
+	//client_write(target_fd);
+	//client_write(cs);
 	std::cout << "Client #" << cs << " successfully invited " << target_nick << " to " << ch_name << std::endl;
 }
 
@@ -1048,7 +1045,7 @@ void env::handle_command_topic(int cs, const std::string& cmd_line)
 		{
 			fds[cs].buf_write += ":ircserv 332 " + sender_nick + " " + ch_name + " :" + current_topic + "\r\n"; // 332 RPL_TOPIC
 		}
-		client_write(cs); // 데이터 즉시 송신 플러시
+		//client_write(cs); // 데이터 즉시 송신 플러시
 	}
 	else
 	{
@@ -1068,7 +1065,7 @@ void env::handle_command_topic(int cs, const std::string& cmd_line)
 		{
 			int member_fd = members[i];
 			fds[member_fd].buf_write += topic_packet;
-			client_write(member_fd); // 상단 타이틀바 실시간 갱신 처리를 위해 소켓에 즉시 쓰기
+			//client_write(member_fd); // 상단 타이틀바 실시간 갱신 처리를 위해 소켓에 즉시 쓰기
 		}
 		std::cout << "Client #" << cs << " changed topic of " << ch_name << " to: " << new_topic << std::endl;
 	}
@@ -1161,8 +1158,7 @@ void env::handle_command_mode(int cs, const std::string& cmd_line)
 				applied_modes += "-";
 			continue;
 		}
-
-		// 인자가 없는 모드 처리 (i, t)
+		// 인자가 없는 모드 처리
 		if (flag == 'i')
 		{
 			channel.set_invite_only(sign);
@@ -1173,81 +1169,95 @@ void env::handle_command_mode(int cs, const std::string& cmd_line)
 			channel.set_topic_op_only(sign);
 			applied_modes += "t";
 		}
-		// 인자가 필요한 모드 처리 (k, l, o)
-		else if (flag == 'k' || flag == 'l' || flag == 'o')
+		
+		// l 모드 (인원 제한): '+' 일 때만 인자가 필요함, '-' 일 때는 인자 없음
+		else if (flag == 'l')
+		{
+			if (sign) // +l 인 경우
+			{
+				std::string param;
+				if (!(ss >> param)) // 인자 추출 실패 시
+				{
+					fds[cs].buf_write += ":ircserv 461 " + sender_nick + " MODE :Not enough parameters\r\n";
+					continue;
+				}
+				
+				std::stringstream l_ss(param);
+				long limit = 0;
+				if (l_ss >> limit && limit >= 0)
+				{
+					channel.set_max_users(limit);
+					applied_modes += "l";
+					applied_params += " " + param;
+				}
+			}
+			else // -l 인 경우 (인자 파싱 없이 즉시 해제)
+			{
+				channel.set_max_users(-1);
+				applied_modes += "l";
+			}
+		}
+		
+		// k 모드 (비밀번호): '+' 일 때만 인자가 필요함 (표준에선 -k 역시 인자가 불필요하거나 무시됨)
+		else if (flag == 'k')
+		{
+			if (sign) // +k 인 경우
+			{
+				std::string param;
+				if (!(ss >> param))
+				{
+					fds[cs].buf_write += ":ircserv 461 " + sender_nick + " MODE :Not enough parameters\r\n";
+					continue;
+				}
+				channel.set_key(param);
+				applied_modes += "k";
+				applied_params += " " + param;
+			}
+			else // -k 인 경우
+			{
+				channel.set_key("");
+				applied_modes += "k";
+			}
+		}
+		
+		// o 모드 (오퍼레이터): '+'와 '-' 모두 대상 '유저 닉네임' 인자가 반드시 필요함
+		else if (flag == 'o')
 		{
 			std::string param;
-			ss >> param;
-
-			// '+' 상태인데 다음 인자가 없으면 에러 (단, -k는 인자가 없거나 상관없음)
-			if (param.empty() && !(flag == 'k' && sign == false))
+			if (!(ss >> param))
 			{
 				fds[cs].buf_write += ":ircserv 461 " + sender_nick + " MODE :Not enough parameters\r\n";
 				continue;
 			}
 
-			if (flag == 'k') // 비밀번호 설정/해제
-			{
-				if (sign) {
-					channel.set_key(param);
-					applied_modes += "k";
-					applied_params += " " + param;
-				} else {
-					channel.set_key("");
-					applied_modes += "k";
+			// 대상 유저닉네임으로 FD 찾기
+			int target_fd = -1;
+			for (size_t f = 0; f < fds.size(); ++f) {
+				if (fds[f].type == FD_CLIENT && fds[f].nickname == param) {
+					target_fd = static_cast<int>(f);
+					break;
 				}
 			}
-			else if (flag == 'l') // 인원 제한 설정/해제
-			{
-				if (sign)
-				{
-					std::stringstream ss(param);
-					long limit = 0;
 
-					// 스트림을 통해 변환이 성공했고, 값이 0 이상인 경우에만 처리
-					if (ss >> limit && limit >= 0)
-					{
-						channel.set_max_users(limit);
-						applied_modes += "l";
-						applied_params += " " + param;
-					}
-				}
-				else
-				{
-					channel.set_max_users(-1);
-					applied_modes += "l";
-				}
+			if (target_fd == -1 || !channel.is_member(target_fd)) {
+				fds[cs].buf_write += ":ircserv 441 " + sender_nick + " " + param + " " + target + " :They aren't on that channel\r\n";
+				continue;
 			}
-			else if (flag == 'o') // 오퍼레이터 권한 부여/박탈
-			{
-				// 대상 유저닉네임으로 FD 찾기
-				int target_fd = -1;
-				for (size_t f = 0; f < fds.size(); ++f) {
-					if (fds[f].type == FD_CLIENT && fds[f].nickname == param) {
-						target_fd = static_cast<int>(f);
-						break;
-					}
-				}
 
-				if (target_fd == -1 || !channel.is_member(target_fd)) {
-					fds[cs].buf_write += ":ircserv 441 " + sender_nick + " " + param + " " + target + " :They aren't on that channel\r\n";
-					continue;
-				}
-
-				if (sign) {
-					channel.add_operator(target_fd);
-				} else {
-					channel.remove_operator(target_fd);
-				}
-				applied_modes += "o";
-				applied_params += " " + param;
+			if (sign) {
+				channel.add_operator(target_fd);
+			} else {
+				channel.remove_operator(target_fd);
 			}
+			applied_modes += "o";
+			applied_params += " " + param;
 		}
+		
+		// 알 수 없는 플래그 에러 처리
 		else
 		{
-			// 알 수 없는 플래그 에러 처리 (472 ERR_UNKNOWNMODE)
 			std::string unknown_flag(1, flag);
-			fds[cs].buf_write += ":ircserv 472 " + sender_nick + " " + unknown_flag + " :is unknown mode char to me\r\n";
+			fds[cs].buf_write += ":ircserv 472 " + sender_nick + " " + ch_name + " " + unknown_flag + " :is unknown mode char to me\r\n";
 		}
 	}
 

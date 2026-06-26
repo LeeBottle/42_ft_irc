@@ -98,7 +98,7 @@ public:
 	
 	void	client_read(int cs);
 	std::string	client_read_line(int cs);
-	void 	handle_commands(int cs, const std::string& cmd_line);
+	void 	handle_commands(int cs, std::string cmd_line);
 	void 	handle_command_pass(int cs, const std::string& cmd_line);
 	void	broadcast_message(int sender_cs, const std::string& target, const std::string& message);
 	void 	handle_command_nick(int cs, const std::string& cmd_line);
