@@ -112,6 +112,8 @@ void    ServerMessageHandler::handleMessage(ServerConnection &connection,
         handlePart(connection, client, message);
     else if (command == "MODE")
         handleMode(connection, client, message);
+    else if (command == "WHO")
+        handleWho(connection, client, message);
     else
         sendReply(connection, client, ":ircserv 421 "
             + getReplyTarget(client) + " " + command + " :Unknown command");
@@ -547,6 +549,41 @@ void    ServerMessageHandler::handleMode(ServerConnection &connection,
     (void)message;
     sendReply(connection, client, ":ircserv 221 "
         + getReplyTarget(client) + " +i");
+}
+
+void    ServerMessageHandler::handleWho(ServerConnection &connection, Client &client, const Message &message)
+{
+    const std::vector<std::string>&         params = message.getParameters();
+    const std::vector<Client *>*            members;
+    std::vector<Client *>::const_iterator   it;
+    std::string                             target;
+    std::string                             channelName;
+    std::string                             realname;
+    Channel*                                channel;
+
+    target = getReplyTarget(client);
+    if (params.empty())
+    {
+        sendReply(connection, client, ":ircserv 461 " + target + " WHO :Not enough parameters");
+        return ;
+    }
+    channelName = params[0];
+    channel = findChannel(channelName);
+    if (channel != NULL)
+    {
+        members = &channel->getMembers();
+        it = members->begin();
+        while (it != members->end())
+        {
+            realname = (*it)->getRealname();
+            if (realname.empty())
+                realname = (*it)->getNickname();
+            sendReply(connection, client, ":ircserv 352 " + target + " " + channelName + " " + (*it)->getUsername()
+            + " localhost ircserv " + (*it)->getNickname() + " H :0 " + realname);
+            ++it;
+        }
+    }
+    sendReply(connection, client, ":irecserv 315 " + target + " " + channelName + " :End of WHO list");
 }
 
 void    ServerMessageHandler::removeClientFromChannels(Client &client)

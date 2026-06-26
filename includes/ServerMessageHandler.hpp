@@ -36,6 +36,7 @@ private:
     void    handleJoin(ServerConnection &, Client &, const Message &);
     void    handlePart(ServerConnection &, Client &, const Message &);
     void    handleMode(ServerConnection &, Client &, const Message &);
+    void    handleWho(ServerConnection &, Client &, const Message &);
     void    handleCap(ServerConnection &, Client &, const Message &);
     void    handlePing(ServerConnection &, Client &, const Message &);
     void    handleQuit(ServerConnection &, Client &, const Message &);
