@@ -3,7 +3,7 @@
 #include <algorithm>
 
 Channel::Channel(const std::string &name)
-    : _name(name), _members()
+    : _name(name), _members(), _topic()
 {
 }
 
@@ -21,10 +21,20 @@ const std::vector<Client *> &Channel::getMembers() const
     return (_members);
 }
 
+const std::string   &Channel::getTopic() const
+{
+    return (_topic);
+}
+
 bool    Channel::hasMember(Client *client) const
 {
     return (std::find(_members.begin(), _members.end(), client)
         != _members.end());
+}
+
+bool    Channel::hasTopic() const
+{
+    return (!_topic.empty());
 }
 
 void    Channel::addMember(Client *client)
@@ -43,6 +53,11 @@ void    Channel::removeMember(Client *client)
     it = std::find(_members.begin(), _members.end(), client);
     if (it != _members.end())
         _members.erase(it);
+}
+
+void    Channel::setTopic(const std::string& topic)
+{
+    _topic = topic;
 }
 
 bool    Channel::isEmpty() const

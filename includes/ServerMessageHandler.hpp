@@ -35,6 +35,7 @@ private:
     void    handlePrivmsg(ServerConnection &, Client &, const Message &);
     void    handleJoin(ServerConnection &, Client &, const Message &);
     void    handlePart(ServerConnection &, Client &, const Message &);
+    void    handleTopic(ServerConnection &, Client&, const Message &);
     void    handleMode(ServerConnection &, Client &, const Message &);
     void    handleWho(ServerConnection &, Client &, const Message &);
     void    handleCap(ServerConnection &, Client &, const Message &);
@@ -52,6 +53,7 @@ private:
     void    sendToChannel(ServerConnection &, Channel *,
                 const std::string &, Client *);
     void    sendNamesReply(ServerConnection &, Client &, Channel *);
+    void    sendTopicReply(ServerConnection &, Client &, Channel *);
     std::string makeNamesList(Channel *) const;
     bool    isValidNickname(const std::string &) const;
     std::string getReplyTarget(const Client &) const;
