@@ -1,5 +1,5 @@
-#include "ServerMessageHandler.hpp"
-#include "ServerConnection.hpp"
+#include "MessageHandler.hpp"
+#include "Connection.hpp"
 
 #include <cerrno>
 #include <cctype>
@@ -8,12 +8,12 @@
 #include <sstream>
 #include <sys/socket.h>
 
-ServerMessageHandler::ServerMessageHandler()
+MessageHandler::MessageHandler()
     : _channels()
 {
 }
 
-ServerMessageHandler::~ServerMessageHandler()
+MessageHandler::~MessageHandler()
 {
     std::vector<Channel *>::iterator it;
 
@@ -26,7 +26,7 @@ ServerMessageHandler::~ServerMessageHandler()
     _channels.clear();
 }
 
-void    ServerMessageHandler::receiveClient(ServerConnection &connection,
+void    MessageHandler::receiveClient(Connection &connection,
     int clientFd)
 {
     char    buffer[512];
@@ -63,7 +63,7 @@ void    ServerMessageHandler::receiveClient(ServerConnection &connection,
     }
 }
 
-void    ServerMessageHandler::processReceivedLines(ServerConnection &connection,
+void    MessageHandler::processReceivedLines(Connection &connection,
     Client &client)
 {
     std::string line;
@@ -83,7 +83,7 @@ void    ServerMessageHandler::processReceivedLines(ServerConnection &connection,
     }
 }
 
-void    ServerMessageHandler::handleMessage(ServerConnection &connection,
+void    MessageHandler::handleMessage(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -126,7 +126,7 @@ void    ServerMessageHandler::handleMessage(ServerConnection &connection,
             + getReplyTarget(client) + " " + command + " :Unknown command");
 }
 
-void    ServerMessageHandler::handlePass(ServerConnection &connection,
+void    MessageHandler::handlePass(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -152,7 +152,7 @@ void    ServerMessageHandler::handlePass(ServerConnection &connection,
     tryRegister(connection, client);
 }
 
-void    ServerMessageHandler::handleNick(ServerConnection &connection,
+void    MessageHandler::handleNick(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -180,7 +180,7 @@ void    ServerMessageHandler::handleNick(ServerConnection &connection,
     tryRegister(connection, client);
 }
 
-void    ServerMessageHandler::handleUser(ServerConnection &connection,
+void    MessageHandler::handleUser(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -201,7 +201,7 @@ void    ServerMessageHandler::handleUser(ServerConnection &connection,
     tryRegister(connection, client);
 }
 
-void    ServerMessageHandler::handlePrivmsg(ServerConnection &connection,
+void    MessageHandler::handlePrivmsg(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -251,7 +251,7 @@ void    ServerMessageHandler::handlePrivmsg(ServerConnection &connection,
     connection.enableClientWrite(targetClient->getFd());
 }
 
-void    ServerMessageHandler::handleCap(ServerConnection &connection,
+void    MessageHandler::handleCap(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -271,7 +271,7 @@ void    ServerMessageHandler::handleCap(ServerConnection &connection,
         sendReply(connection, client, ":ircserv CAP " + target + " NAK :");
 }
 
-void    ServerMessageHandler::handlePing(ServerConnection &connection,
+void    MessageHandler::handlePing(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -284,7 +284,7 @@ void    ServerMessageHandler::handlePing(ServerConnection &connection,
     sendReply(connection, client, "PONG :" + message.getParameters()[0]);
 }
 
-void    ServerMessageHandler::handleQuit(ServerConnection &connection,
+void    MessageHandler::handleQuit(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -292,7 +292,7 @@ void    ServerMessageHandler::handleQuit(ServerConnection &connection,
     connection.disconnectClient(client.getFd());
 }
 
-void    ServerMessageHandler::tryRegister(ServerConnection &connection,
+void    MessageHandler::tryRegister(Connection &connection,
     Client &client)
 {
     if (client.isRegistered())
@@ -306,7 +306,7 @@ void    ServerMessageHandler::tryRegister(ServerConnection &connection,
         + makeClientPrefix(client));
 }
 
-void    ServerMessageHandler::sendReply(ServerConnection &connection,
+void    MessageHandler::sendReply(Connection &connection,
     Client &client,
     const std::string &message)
 {
@@ -316,7 +316,7 @@ void    ServerMessageHandler::sendReply(ServerConnection &connection,
     connection.enableClientWrite(client.getFd());
 }
 
-bool    ServerMessageHandler::isNicknameInUse(ServerConnection &connection,
+bool    MessageHandler::isNicknameInUse(Connection &connection,
     const Client &client,
     const std::string &nickname) const
 {
@@ -333,7 +333,7 @@ bool    ServerMessageHandler::isNicknameInUse(ServerConnection &connection,
     return (false);
 }
 
-bool    ServerMessageHandler::isValidNickname(const std::string &nickname) const
+bool    MessageHandler::isValidNickname(const std::string &nickname) const
 {
     std::string::size_type index;
 
@@ -350,7 +350,7 @@ bool    ServerMessageHandler::isValidNickname(const std::string &nickname) const
     return (true);
 }
 
-std::string ServerMessageHandler::toUpperCommand(
+std::string MessageHandler::toUpperCommand(
     const std::string &command) const
 {
     std::string result;
@@ -366,7 +366,7 @@ std::string ServerMessageHandler::toUpperCommand(
     return (result);
 }
 
-bool    ServerMessageHandler::parseLimit(const std::string &text,
+bool    MessageHandler::parseLimit(const std::string &text,
     unsigned int &limit) const
 {
     std::string::size_type index;
@@ -389,7 +389,7 @@ bool    ServerMessageHandler::parseLimit(const std::string &text,
     return (true);
 }
 
-void    ServerMessageHandler::addModeChange(std::string &modeChanges,
+void    MessageHandler::addModeChange(std::string &modeChanges,
     char &currentSign,
     char sign,
     char mode) const
@@ -402,8 +402,8 @@ void    ServerMessageHandler::addModeChange(std::string &modeChanges,
     modeChanges += mode;
 }
 
-Client  *ServerMessageHandler::findClientByNickname(
-    ServerConnection &connection,
+Client  *MessageHandler::findClientByNickname(
+    Connection &connection,
     const std::string &nickname) const
 {
     std::vector<Client *>::const_iterator it;
@@ -418,21 +418,21 @@ Client  *ServerMessageHandler::findClientByNickname(
     return (NULL);
 }
 
-std::string ServerMessageHandler::getReplyTarget(const Client &client) const
+std::string MessageHandler::getReplyTarget(const Client &client) const
 {
     if (client.hasNickname())
         return (client.getNickname());
     return ("*");
 }
 
-std::string ServerMessageHandler::makeClientPrefix(const Client &client) const
+std::string MessageHandler::makeClientPrefix(const Client &client) const
 {
     return (client.getNickname() + "!" + client.getUsername()
         + "@localhost");
 }
 
 
-Channel *ServerMessageHandler::findChannel(const std::string &name) const
+Channel *MessageHandler::findChannel(const std::string &name) const
 {
     std::vector<Channel *>::const_iterator it;
 
@@ -446,7 +446,7 @@ Channel *ServerMessageHandler::findChannel(const std::string &name) const
     return (NULL);
 }
 
-Channel *ServerMessageHandler::getOrCreateChannel(const std::string &name)
+Channel *MessageHandler::getOrCreateChannel(const std::string &name)
 {
     Channel *channel;
 
@@ -458,12 +458,12 @@ Channel *ServerMessageHandler::getOrCreateChannel(const std::string &name)
     return (channel);
 }
 
-bool    ServerMessageHandler::isChannelName(const std::string &name) const
+bool    MessageHandler::isChannelName(const std::string &name) const
 {
     return (!name.empty() && name[0] == '#');
 }
 
-void    ServerMessageHandler::sendToChannel(ServerConnection &connection,
+void    MessageHandler::sendToChannel(Connection &connection,
     Channel *channel,
     const std::string &message,
     Client *except)
@@ -480,7 +480,7 @@ void    ServerMessageHandler::sendToChannel(ServerConnection &connection,
     }
 }
 
-std::string ServerMessageHandler::makeNamesList(Channel *channel) const
+std::string MessageHandler::makeNamesList(Channel *channel) const
 {
     const std::vector<Client *>       &members = channel->getMembers();
     std::vector<Client *>::const_iterator it;
@@ -499,7 +499,7 @@ std::string ServerMessageHandler::makeNamesList(Channel *channel) const
     return (names);
 }
 
-void    ServerMessageHandler::sendNamesReply(ServerConnection &connection,
+void    MessageHandler::sendNamesReply(Connection &connection,
     Client &client,
     Channel *channel)
 {
@@ -516,7 +516,7 @@ void    ServerMessageHandler::sendNamesReply(ServerConnection &connection,
         + " " + channelName + " :End of /NAMES list.");
 }
 
-void    ServerMessageHandler::sendTopicReply(ServerConnection &connection,
+void    MessageHandler::sendTopicReply(Connection &connection,
     Client &client,
     Channel *channel)
 {
@@ -533,7 +533,7 @@ void    ServerMessageHandler::sendTopicReply(ServerConnection &connection,
             + " " + channelName + " :No topic is set");
 }
 
-void    ServerMessageHandler::sendChannelModeReply(ServerConnection &connection,
+void    MessageHandler::sendChannelModeReply(Connection &connection,
     Client &client,
     Channel *channel)
 {
@@ -561,7 +561,7 @@ void    ServerMessageHandler::sendChannelModeReply(ServerConnection &connection,
         + " " + channel->getName() + " " + modes + params);
 }
 
-void    ServerMessageHandler::handleJoin(ServerConnection &connection,
+void    MessageHandler::handleJoin(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -626,7 +626,7 @@ void    ServerMessageHandler::handleJoin(ServerConnection &connection,
     sendNamesReply(connection, client, channel);
 }
 
-void    ServerMessageHandler::handlePart(ServerConnection &connection,
+void    MessageHandler::handlePart(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -663,7 +663,7 @@ void    ServerMessageHandler::handlePart(ServerConnection &connection,
     deleteChannelIfEmpty(channel);
 }
 
-void    ServerMessageHandler::handleTopic(ServerConnection &connection,
+void    MessageHandler::handleTopic(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -712,7 +712,7 @@ void    ServerMessageHandler::handleTopic(ServerConnection &connection,
     sendToChannel(connection, channel, topicMessage, NULL);
 }
 
-void    ServerMessageHandler::handleInvite(ServerConnection &connection,
+void    MessageHandler::handleInvite(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -773,7 +773,7 @@ void    ServerMessageHandler::handleInvite(ServerConnection &connection,
     connection.enableClientWrite(targetClient->getFd());
 }
 
-void    ServerMessageHandler::handleKick(ServerConnection &connection,
+void    MessageHandler::handleKick(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -829,7 +829,7 @@ void    ServerMessageHandler::handleKick(ServerConnection &connection,
     deleteChannelIfEmpty(channel);
 }
 
-void    ServerMessageHandler::handleMode(ServerConnection &connection,
+void    MessageHandler::handleMode(Connection &connection,
     Client &client,
     const Message &message)
 {
@@ -1010,7 +1010,7 @@ void    ServerMessageHandler::handleMode(ServerConnection &connection,
             + " MODE " + params[0] + " " + modeChanges + modeParams, NULL);
 }
 
-void    ServerMessageHandler::handleWho(ServerConnection &connection, Client &client, const Message &message)
+void    MessageHandler::handleWho(Connection &connection, Client &client, const Message &message)
 {
     const std::vector<std::string>&         params = message.getParameters();
     const std::vector<Client *>*            members;
@@ -1045,7 +1045,7 @@ void    ServerMessageHandler::handleWho(ServerConnection &connection, Client &cl
     sendReply(connection, client, ":ircserv 315 " + target + " " + channelName + " :End of WHO list");
 }
 
-void    ServerMessageHandler::removeClientFromChannels(Client &client)
+void    MessageHandler::removeClientFromChannels(Client &client)
 {
     std::vector<Channel *>::iterator it;
 
@@ -1064,7 +1064,7 @@ void    ServerMessageHandler::removeClientFromChannels(Client &client)
     }
 }
 
-void    ServerMessageHandler::sendToClient(ServerConnection &connection,
+void    MessageHandler::sendToClient(Connection &connection,
     int clientFd)
 {
     Client  *client;
@@ -1093,7 +1093,7 @@ void    ServerMessageHandler::sendToClient(ServerConnection &connection,
     connection.disableClientWrite(clientFd);
 }
 
-void    ServerMessageHandler::deleteChannelIfEmpty(Channel *channel)
+void    MessageHandler::deleteChannelIfEmpty(Channel *channel)
 {
     std::vector<Channel *>::iterator it;
 

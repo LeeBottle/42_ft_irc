@@ -9,8 +9,8 @@ OBJ_DIR = obj
 
 SRCS = main.cpp	\
 	   Server.cpp	\
-	   ServerConnection.cpp	\
-	   ServerMessageHandler.cpp	\
+	   Connection.cpp	\
+	   MessageHandler.cpp	\
 	   Client.cpp	\
 	   Message.cpp	\
 	   Channel.cpp

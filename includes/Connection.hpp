@@ -1,25 +1,25 @@
-#ifndef SERVER_CONNECTION_HPP
-# define SERVER_CONNECTION_HPP
+#ifndef CONNECTION_HPP
+# define CONNECTION_HPP
 
 # include "Client.hpp"
-# include "ServerMessageHandler.hpp"
+# include "MessageHandler.hpp"
 
 # include <poll.h>
 # include <string>
 # include <vector>
 
-class ServerConnection
+class Connection
 {
 private:
     int                         _serverFd;
     const std::string           _password;
     std::vector<struct pollfd>  _pollFds;
     std::vector<Client *>       _clients;
-    ServerMessageHandler        _messageHandler;
+    MessageHandler        _messageHandler;
 
 public:
-    ServerConnection(int, const std::string &);
-    ~ServerConnection();
+    Connection(int, const std::string &);
+    ~Connection();
 
     void    run();
     Client  *findClient(int);
@@ -30,9 +30,9 @@ public:
     void    disconnectClient(int);
 
 private:
-    ServerConnection();
-    ServerConnection(const ServerConnection &);
-    ServerConnection& operator=(const ServerConnection &);
+    Connection();
+    Connection(const Connection &);
+    Connection& operator=(const Connection &);
 
     void    pollEvents();
     void    acceptClients();

@@ -1,4 +1,4 @@
-#include "ServerConnection.hpp"
+#include "Connection.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -7,24 +7,24 @@
 #include <iostream>
 #include <sys/socket.h>
 
-ServerConnection::ServerConnection(int serverFd, const std::string &password)
+Connection::Connection(int serverFd, const std::string &password)
     : _serverFd(serverFd), _password(password), _pollFds(), _clients(),
     _messageHandler()
 {
     addPollFd(_serverFd, POLLIN);
 }
 
-ServerConnection::~ServerConnection()
+Connection::~Connection()
 {
     closeClients();
 }
 
-void    ServerConnection::run()
+void    Connection::run()
 {
     pollEvents();
 }
 
-void    ServerConnection::pollEvents()
+void    Connection::pollEvents()
 {
     int         readyCount;
     std::size_t index;
@@ -56,7 +56,7 @@ void    ServerConnection::pollEvents()
     }
 }
 
-void    ServerConnection::acceptClients()
+void    Connection::acceptClients()
 {
     int clientFd;
 
@@ -76,7 +76,7 @@ void    ServerConnection::acceptClients()
     }
 }
 
-void    ServerConnection::addClient(int clientFd)
+void    Connection::addClient(int clientFd)
 {
     Client *client;
 
@@ -85,7 +85,7 @@ void    ServerConnection::addClient(int clientFd)
     addPollFd(clientFd, POLLIN);
 }
 
-void    ServerConnection::handleClientEvent(int clientFd, short revents)
+void    Connection::handleClientEvent(int clientFd, short revents)
 {
     if (revents & POLLIN)
         _messageHandler.receiveClient(*this, clientFd);
@@ -101,13 +101,13 @@ void    ServerConnection::handleClientEvent(int clientFd, short revents)
     }
 }
 
-void    ServerConnection::setNonBlocking(int fd)
+void    Connection::setNonBlocking(int fd)
 {
     if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
         exitWithError("fcntl");
 }
 
-void    ServerConnection::addPollFd(int fd, short events)
+void    Connection::addPollFd(int fd, short events)
 {
     struct pollfd pollFd;
 
@@ -117,7 +117,7 @@ void    ServerConnection::addPollFd(int fd, short events)
     _pollFds.push_back(pollFd);
 }
 
-void    ServerConnection::removePollFd(int fd)
+void    Connection::removePollFd(int fd)
 {
     std::vector<struct pollfd>::iterator it;
 
@@ -133,7 +133,7 @@ void    ServerConnection::removePollFd(int fd)
     }
 }
 
-void    ServerConnection::updatePollFd(int fd, short events)
+void    Connection::updatePollFd(int fd, short events)
 {
     std::vector<struct pollfd>::iterator it;
 
@@ -149,7 +149,7 @@ void    ServerConnection::updatePollFd(int fd, short events)
     }
 }
 
-Client  *ServerConnection::findClient(int clientFd)
+Client  *Connection::findClient(int clientFd)
 {
     std::vector<Client *>::iterator it;
 
@@ -163,27 +163,27 @@ Client  *ServerConnection::findClient(int clientFd)
     return (NULL);
 }
 
-const std::vector<Client *> &ServerConnection::getClients() const
+const std::vector<Client *> &Connection::getClients() const
 {
     return (_clients);
 }
 
-const std::string   &ServerConnection::getPassword() const
+const std::string   &Connection::getPassword() const
 {
     return (_password);
 }
 
-void    ServerConnection::enableClientWrite(int clientFd)
+void    Connection::enableClientWrite(int clientFd)
 {
     updatePollFd(clientFd, POLLIN | POLLOUT);
 }
 
-void    ServerConnection::disableClientWrite(int clientFd)
+void    Connection::disableClientWrite(int clientFd)
 {
     updatePollFd(clientFd, POLLIN);
 }
 
-void    ServerConnection::disconnectClient(int clientFd)
+void    Connection::disconnectClient(int clientFd)
 {
     std::vector<Client *>::iterator it;
 
@@ -202,13 +202,13 @@ void    ServerConnection::disconnectClient(int clientFd)
     }
 }
 
-void    ServerConnection::closeClients()
+void    Connection::closeClients()
 {
     while (!_clients.empty())
         disconnectClient(_clients.back()->getFd());
 }
 
-void    ServerConnection::exitWithError(const char *functionName)
+void    Connection::exitWithError(const char *functionName)
 {
     std::cerr << functionName << ": " << std::strerror(errno) << std::endl;
     std::exit(EXIT_FAILURE);

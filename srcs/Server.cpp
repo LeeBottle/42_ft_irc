@@ -1,5 +1,5 @@
 #include "Server.hpp"
-#include "ServerConnection.hpp"
+#include "Connection.hpp"
 
 #include <cerrno>
 #include <cstdlib>
@@ -27,7 +27,7 @@ void    Server::run()
     setNonBlocking(_serverFd);
     bindSocket();
     listenSocket();
-    ServerConnection connection(_serverFd, _password);
+    Connection connection(_serverFd, _password);
 
     connection.run();
 }
