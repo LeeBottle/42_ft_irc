@@ -37,6 +37,7 @@ private:
     void    handlePart(ServerConnection &, Client &, const Message &);
     void    handleTopic(ServerConnection &, Client &, const Message &);
     void    handleInvite(ServerConnection &, Client &, const Message &);
+    void    handleKick(ServerConnection &, Client &, const Message &);
     void    handleMode(ServerConnection &, Client &, const Message &);
     void    handleWho(ServerConnection &, Client &, const Message &);
     void    handleCap(ServerConnection &, Client &, const Message &);
@@ -44,12 +45,15 @@ private:
     void    handleQuit(ServerConnection &, Client &, const Message &);
     void    tryRegister(ServerConnection &, Client &);
     void    sendReply(ServerConnection &, Client &, const std::string &);
-    bool    isNicknameInUse(ServerConnection &, const Client &, const std::string &) const;
-    Client  *findClientByNickname(ServerConnection &, const std::string &) const;
+    bool    isNicknameInUse(ServerConnection &, const Client &,
+                const std::string &) const;
+    Client  *findClientByNickname(ServerConnection &,
+                const std::string &) const;
     Channel *findChannel(const std::string &) const;
     Channel *getOrCreateChannel(const std::string &);
     bool    isChannelName(const std::string &) const;
-    void    sendToChannel(ServerConnection &, Channel *, const std::string &, Client *);
+    void    sendToChannel(ServerConnection &, Channel *,
+                const std::string &, Client *);
     void    sendNamesReply(ServerConnection &, Client &, Channel *);
     void    sendTopicReply(ServerConnection &, Client &, Channel *);
     std::string makeNamesList(Channel *) const;

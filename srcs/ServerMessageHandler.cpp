@@ -114,6 +114,8 @@ void    ServerMessageHandler::handleMessage(ServerConnection &connection,
         handleTopic(connection, client, message);
     else if (command == "INVITE")
         handleInvite(connection, client, message);
+    else if (command == "KICK")
+        handleKick(connection, client, message);
     else if (command == "MODE")
         handleMode(connection, client, message);
     else if (command == "WHO")
@@ -658,6 +660,55 @@ void    ServerMessageHandler::handleInvite(ServerConnection &connection,
         + targetClient->getNickname() + " :" + params[1] + "\r\n";
     targetClient->appendSend(inviteMessage);
     connection.enableClientWrite(targetClient->getFd());
+}
+
+void    ServerMessageHandler::handleKick(ServerConnection &connection,
+    Client &client,
+    const Message &message)
+{
+    const std::vector<std::string>    &params = message.getParameters();
+    Channel                           *channel;
+    Client                            *targetClient;
+    std::string                       comment;
+    std::string                       kickMessage;
+
+    if (params.size() < 2)
+    {
+        sendReply(connection, client, ":ircserv 461 "
+            + getReplyTarget(client) + " KICK :Not enough parameters");
+        return ;
+    }
+    channel = findChannel(params[0]);
+    if (channel == NULL)
+    {
+        sendReply(connection, client, ":ircserv 403 "
+            + getReplyTarget(client) + " " + params[0]
+            + " :No such channel");
+        return ;
+    }
+    if (!channel->hasMember(&client))
+    {
+        sendReply(connection, client, ":ircserv 442 "
+            + getReplyTarget(client) + " " + params[0]
+            + " :You're not on that channel");
+        return ;
+    }
+    targetClient = findClientByNickname(connection, params[1]);
+    if (targetClient == NULL || !channel->hasMember(targetClient))
+    {
+        sendReply(connection, client, ":ircserv 441 "
+            + getReplyTarget(client) + " " + params[1] + " " + params[0]
+            + " :They aren't on that channel");
+        return ;
+    }
+    comment = client.getNickname();
+    if (params.size() > 2 && !params[2].empty())
+        comment = params[2];
+    kickMessage = ":" + makeClientPrefix(client) + " KICK "
+        + params[0] + " " + targetClient->getNickname() + " :" + comment;
+    sendToChannel(connection, channel, kickMessage, NULL);
+    channel->removeMember(targetClient);
+    deleteChannelIfEmpty(channel);
 }
 
 void    ServerMessageHandler::handleMode(ServerConnection &connection,
