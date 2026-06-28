@@ -1,73 +1,71 @@
+#include "server/Server.hpp"
+
+#include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <string>
-#include "Server.hpp"
 
-int parsePort(std::string inputPort)
+static int  convertPort(const std::string &strPort)
 {
-    int         port = 0;
-    std::size_t i = 0;
+    int     port;
+    size_t  index;
 
-    if (inputPort.empty())
+    if (strPort.empty())
         return (-1);
-
-    while (i < inputPort.size())
+    port = 0;
+    index = 0;
+    while (index < strPort.size())
     {
-        if (inputPort[i] < '0' || inputPort[i] > '9')
+        if (strPort[index] < '0' || strPort[index] > '9')
             return (-1);
-
-        port = port * 10 + (inputPort[i] - '0');
+        port = port * 10 + (strPort[index] - '0');
         if (port > 65535)
             return (-1);
-        
-        ++i;
+        ++index;
     }
-
-    if (port == 0)  // Port 0 is used that kernel allocates ramdom port to client object
+    if (port == 0)
         return (-1);
-
     return (port);
 }
 
-bool    validatePassword(const std::string &password)
+static bool isValidPassword(const std::string &password)
 {
-    if (password.empty() || password.size() > 504)  // size() count based on bytes
+    if (password.empty() || password.size() > 504)
         return (false);
-
-    if (password.find('\0') != std::string::npos
-        || password.find('\r') != std::string::npos
-        || password.find('\n') != std::string::npos)
+    if (password.find('\0') != std::string::npos)
         return (false);
-
+    if (password.find('\r') != std::string::npos)
+        return (false);
+    if (password.find('\n') != std::string::npos)
+        return (false);
     return (true);
 }
 
 int main(int argc, char **argv)
 {
+    int         port;
+    std::string password;
+
     if (argc != 3)
     {
         std::cerr << "Usage: ./ircserv <port> <password>" << std::endl;
-        return (1);
+        return (EXIT_FAILURE);
     }
-
-    const std::string inputPort(argv[1]);
-    const std::string password(argv[2]);
-    const int         port = parsePort(inputPort);
-
+    port = convertPort(argv[1]);
     if (port == -1)
     {
         std::cerr << "Error: invalid port" << std::endl;
-        return (-1);
+        return (EXIT_FAILURE);
     }
-
-    if (!validatePassword(password))
+    password = argv[2];
+    if (!isValidPassword(password))
     {
         std::cerr << "Error: invalid password" << std::endl;
-        return (-1);
+        return (EXIT_FAILURE);
     }
-    
     Server server(port, password);
 
-    server.run();
-
-    return (0);
+    if (!server.run())
+        return (EXIT_FAILURE);
+    return (EXIT_SUCCESS);
 }
