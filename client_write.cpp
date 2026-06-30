@@ -37,5 +37,7 @@ void	env::client_write(int cs)
 			fds[cs].clean_fd();
 			return;
 		}
+		//버퍼가 완전히 비었으므로 EPOLLOUT(쓰기감시)을 끄고 EPOLLIN(읽기)
+		epoll_mod(cs, EPOLLIN);
 	}
 }

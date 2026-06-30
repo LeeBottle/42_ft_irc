@@ -123,6 +123,7 @@ public:
 	void	epoll_add(int fd, uint32_t events);
 	void	epoll_del(int fd);
 	void	check_epoll();
+	void    epoll_mod(int fd, uint32_t events);
 };
 
 
