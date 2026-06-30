@@ -1,4 +1,4 @@
-#include "irc.hpp"
+#include "bircd.hpp"
 
 void env::handle_commands(int cs, std::string cmd_line)
 {
@@ -823,7 +823,7 @@ void env::handle_command_invite(int cs, const std::string& cmd_line)
 	{
 		idx++;
 	}
-	std::string sender_nick = fds[cs].nickname;
+	//std::string sender_nick = fds[cs].nickname;
 	if (idx >= cmd_line.length())
 	{
 		fds[cs].buf_write += ":ircserv 461 " + sender_nick + " INVITE :Not enough parameters\r\n";
@@ -1186,7 +1186,7 @@ void env::handle_command_mode(int cs, const std::string& cmd_line)
 		else
 		{
 			std::string unknown_flag(1, flag);
-			fds[cs].buf_write += ":ircserv 472 " + sender_nick + " " + ch_name + " " + unknown_flag + " :is unknown mode char to me\r\n";
+			fds[cs].buf_write += ":ircserv 472 " + sender_nick + " " + target + " " + unknown_flag + " :is unknown mode char to me\r\n";
 		}
 	}
 
