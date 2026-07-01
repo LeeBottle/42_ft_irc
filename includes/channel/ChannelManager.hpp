@@ -13,10 +13,10 @@ public:
     ChannelManager();
     ~ChannelManager();
 
-    Channel *getOrCreate(const std::string &);
-    Channel *find(const std::string &);
-    void    deleteIfEmpty(Channel *);
-    void    removeClientFromAll(Client *);
+    Channel *findOrCreate(const std::string &);
+    Channel *findChannel(const std::string &);
+    void    removeEmptyChannel(Channel *);
+    void    removeClientFromAllChannels(Client *);
 
 private:
     std::vector<Channel *> _channels;
@@ -24,7 +24,7 @@ private:
     ChannelManager(const ChannelManager &);
     ChannelManager &operator=(const ChannelManager &);
 
-    void    closeAll();
+    void    clearAllChannels();
 };
 
 #endif

@@ -24,18 +24,21 @@ std::string Channel::getMemberNames() const
     return (_members.getNames(_operators));
 }
 
-Channel::JoinResult  Channel::canJoin(Client *client, 
+Channel::JoinResult  Channel::canJoin(Client *client,
     const std::string &key) const
 {
-    if (_modes.isInviteOnly() && !_invites.hasInvite(client) 
+    if (_modes.isInviteOnly() && !_invites.hasInvite(client)
         && !_members.hasClient(client))
         return (JOIN_INVITE_ONLY);
-    if (_modes.hasKey() && key != _modes.getKey() 
+
+    if (_modes.hasKey() && key != _modes.getKey()
         && !_members.hasClient(client))
         return (JOIN_BAD_KEY);
+
     if (_modes.hasLimit() && _members.size() >= _modes.getLimit()
         && !_members.hasClient(client))
         return (JOIN_FULL);
+
     return (JOIN_ALLOWED);
 }
 
@@ -43,9 +46,11 @@ void    Channel::addClient(Client *client)
 {
     if (client == NULL || _members.hasClient(client))
         return ;
+
     _members.addClient(client);
     if (_members.size() == 1)
         _operators.addOperator(client);
+
     _invites.removeInvite(client);
 }
 
@@ -75,6 +80,7 @@ bool    Channel::grantOperator(Client *client)
 {
     if (!_members.hasClient(client))
         return (false);
+
     return (_operators.addOperator(client));
 }
 

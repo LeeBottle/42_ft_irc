@@ -1,10 +1,15 @@
 #include "server/Server.hpp"
+#include "client/Client.hpp"
+#include "parser/Parser.hpp"
+#include "parser/Parser.hpp"
 
 #include <cerrno>
 #include <cstring>
 #include <iostream>
 #include <poll.h>
 #include <signal.h>
+#include <string>
+#include <unistd.h>
 
 static volatile sig_atomic_t   g_stopRequested = 0;
 
@@ -16,8 +21,7 @@ static void handleStopSignal(int signalNumber)
 
 Server::Server(int port, const std::string &password)
     : _password(password), _channels(), _socket(port), _clients(_channels),
-      _commandRouter(), _commandHandlers(_password, _clients, _channels),
-      _clientRequestHandler()
+      _messageSwitch(_password, _clients, _channels), _clientPollEventHandler()
 {
 }
 
@@ -83,6 +87,7 @@ void    Server::buildPollFds(std::vector<struct pollfd> &pollFds) const
     struct pollfd pollFd;
 
     pollFds.clear();
+    appendTerminalPollFd(pollFds);
     pollFd.fd = _socket.getFd();
     pollFd.events = POLLIN;
     pollFd.revents = 0;
@@ -90,11 +95,25 @@ void    Server::buildPollFds(std::vector<struct pollfd> &pollFds) const
     _clients.appendPollFds(pollFds);
 }
 
+void    Server::appendTerminalPollFd(std::vector<struct pollfd> &pollFds) const
+{
+    struct pollfd pollFd;
+
+    if (!isatty(STDIN_FILENO))
+        return ;
+    pollFd.fd = STDIN_FILENO;
+    pollFd.events = POLLIN;
+    pollFd.revents = 0;
+    pollFds.push_back(pollFd);
+}
+
 void    Server::handlePollEvents(std::vector<struct pollfd> &pollFds)
 {
     size_t index;
     int    fd;
     short  revents;
+    bool   receivedData;
+    Client *client;
 
     index = pollFds.size();
     while (index > 0 && !shouldStop())
@@ -104,12 +123,53 @@ void    Server::handlePollEvents(std::vector<struct pollfd> &pollFds)
         revents = pollFds[index].revents;
         if (revents == 0)
             continue ;
-        if (fd == _socket.getFd() && (revents & POLLIN))
+        if (fd == STDIN_FILENO)
+        {
+            if (revents & POLLIN)
+                handleTerminalInput();
+        }
+        else if (fd == _socket.getFd() && (revents & POLLIN))
             acceptPendingClients();
         else if (fd != _socket.getFd())
-            _clientRequestHandler.handleEvent(_clients, _commandRouter,
-                _commandHandlers, fd, revents);
+        {
+            if (!_clientPollEventHandler.handleEvent(_clients, fd, revents,
+                    receivedData))
+                continue ;
+            client = _clients.find(fd);
+            if (receivedData && client != NULL
+                && !processReceivedMessages(*client))
+                _clients.remove(fd);
+        }
     }
+}
+
+void    Server::handleTerminalInput()
+{
+    std::string line;
+
+    if (!std::getline(std::cin, line))
+        return ;
+    if (line == "DIE")
+        g_stopRequested = 1;
+}
+
+bool    Server::processReceivedMessages(Client &client)
+{
+    Parser   message;
+    std::string     line;
+
+    while (Parser::popLine(client, line))
+    {
+        std::cout << "received from fd " << client.getFd()
+            << ": " << line << std::endl;
+        if (Parser::parse(line, message))
+        {
+            if (!_messageSwitch.branch(client, message))
+                return (false);
+        }
+        message = Parser();
+    }
+    return (true);
 }
 
 bool    Server::acceptPendingClients()

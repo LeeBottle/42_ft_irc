@@ -58,7 +58,7 @@ void    ClientManager::remove(int clientFd)
     {
         if ((*it)->getFd() == clientFd)
         {
-            _channels.removeClientFromAll(*it);
+            _channels.removeClientFromAllChannels(*it);
             delete *it;
             _clients.erase(it);
             return ;
@@ -74,7 +74,7 @@ void    ClientManager::closeAll()
     it = _clients.begin();
     while (it != _clients.end())
     {
-        _channels.removeClientFromAll(*it);
+        _channels.removeClientFromAllChannels(*it);
         delete *it;
         ++it;
     }

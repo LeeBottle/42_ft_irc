@@ -18,24 +18,24 @@ SRCS = main.cpp \
        client/Client.cpp \
        client/ClientBuffer.cpp \
        client/ClientManager.cpp \
-       client/ClientRequestHandler.cpp \
-       command/Command.cpp \
-       command/CommandParser.cpp \
-       command/CommandRouter.cpp \
-       command/CommandHandlers.cpp \
-       command/CommandChannelBase.cpp \
-       command/CommandChannelJoin.cpp \
-       command/CommandChannelMessage.cpp \
-       command/CommandChannelInfo.cpp \
-       command/CommandChannelOperator.cpp \
-       command/CommandChannelMode.cpp \
-       command/CommandChannelModeEdit.cpp \
-       command/CommandChannelModePrepare.cpp \
-       command/CommandChannelModeApply.cpp \
-       command/CommandChannelModeParameter.cpp \
-       command/CommandChannelModeOperator.cpp \
-       command/CommandUserHandler.cpp \
+       client/ClientPollEventHandler.cpp  \
+       client/ClientSocketReceiver.cpp    \
+       client/ClientSocketSender.cpp      \
+       parser/Parser.cpp \
+       command/CommandBase.cpp \
+       command/CommandJoinPart.cpp \
+       command/CommandMessage.cpp \
+       command/CommandInfo.cpp \
+       command/CommandInviteKick.cpp \
+       command/CommandMode.cpp \
+       command/CommandModeEdit.cpp \
+       command/CommandModePrepare.cpp \
+       command/CommandModeApply.cpp \
+       command/CommandModeParameter.cpp \
+       command/CommandModeOperator.cpp \
+       command/CommandUser.cpp \
        server/Server.cpp \
+       server/ServerMessageSwitch.cpp \
        server/ServerSocket.cpp
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)

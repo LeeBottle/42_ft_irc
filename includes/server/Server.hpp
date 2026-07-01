@@ -7,9 +7,8 @@
 
 # include "channel/ChannelManager.hpp"
 # include "client/ClientManager.hpp"
-# include "client/ClientRequestHandler.hpp"
-# include "command/CommandHandlers.hpp"
-# include "command/CommandRouter.hpp"
+# include "client/ClientPollEventHandler.hpp"
+# include "server/ServerMessageSwitch.hpp"
 # include "server/ServerSocket.hpp"
 
 class Server
@@ -25,9 +24,8 @@ private:
     ChannelManager          _channels;
     ServerSocket            _socket;
     ClientManager           _clients;
-    CommandRouter           _commandRouter;
-    CommandHandlers         _commandHandlers;
-    ClientRequestHandler    _clientRequestHandler;
+    ServerMessageSwitch     _messageSwitch;
+    ClientPollEventHandler  _clientPollEventHandler;
 
     Server();
     Server(const Server &);
@@ -36,8 +34,11 @@ private:
     bool    setupSignalHandler();
     bool    runEventLoop();
     bool    acceptPendingClients();
+    bool    processReceivedMessages(Client &);
+    void    appendTerminalPollFd(std::vector<struct pollfd> &) const;
     void    buildPollFds(std::vector<struct pollfd> &) const;
     void    handlePollEvents(std::vector<struct pollfd> &);
+    void    handleTerminalInput();
     bool    shouldStop() const;
     bool    reportSystemError(const char *);
 };

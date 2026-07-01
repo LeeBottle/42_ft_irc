@@ -25,7 +25,8 @@ public:
     void    setNickname(const std::string &);
     void    setUser(const std::string &, const std::string &);
     void    appendReceived(const char *, size_t);
-    bool    extractLine(std::string &);
+    const std::string   &getReceiveBuffer() const;
+    void    removeReceived(size_t);
     void    queueSend(const std::string &);
     bool    hasPendingSend() const;
     size_t  getSendSize() const;

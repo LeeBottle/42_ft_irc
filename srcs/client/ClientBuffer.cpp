@@ -5,16 +5,14 @@ void    Client::appendReceived(const char *data, size_t length)
     _receiveBuffer.append(data, length);
 }
 
-bool    Client::extractLine(std::string &line)
+const std::string   &Client::getReceiveBuffer() const
 {
-    size_t delimiter;
+    return (_receiveBuffer);
+}
 
-    delimiter = _receiveBuffer.find("\r\n");
-    if (delimiter == std::string::npos)
-        return (false);
-    line = _receiveBuffer.substr(0, delimiter);
-    _receiveBuffer.erase(0, delimiter + 2);
-    return (true);
+void    Client::removeReceived(size_t length)
+{
+    _receiveBuffer.erase(0, length);
 }
 
 void    Client::queueSend(const std::string &message)

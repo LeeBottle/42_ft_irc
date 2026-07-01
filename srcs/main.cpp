@@ -8,20 +8,20 @@
 static int  convertPort(const std::string &strPort)
 {
     int     port;
-    size_t  index;
+    size_t  i;
 
     if (strPort.empty())
         return (-1);
     port = 0;
-    index = 0;
-    while (index < strPort.size())
+    i = 0;
+    while (i < strPort.size())
     {
-        if (strPort[index] < '0' || strPort[index] > '9')
+        if (strPort[i] < '0' || strPort[i] > '9')
             return (-1);
-        port = port * 10 + (strPort[index] - '0');
+        port = port * 10 + (strPort[i] - '0');
         if (port > 65535)
             return (-1);
-        ++index;
+        ++i;
     }
     if (port == 0)
         return (-1);
