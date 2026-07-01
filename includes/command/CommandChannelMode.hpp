@@ -2,8 +2,10 @@
 # define COMMANDCHANNELMODE_HPP
 
 # include "command/CommandChannelBase.hpp"
-
-# include <cstddef>
+# include "command/CommandChannelModeApply.hpp"
+# include "command/CommandChannelModeOperator.hpp"
+# include "command/CommandChannelModeParameter.hpp"
+# include "command/CommandChannelModePrepare.hpp"
 
 class Client;
 class Command;
@@ -21,8 +23,10 @@ private:
     CommandChannelMode(const CommandChannelMode &);
     CommandChannelMode &operator=(const CommandChannelMode &);
 
-    bool    parseLimit(const std::string &, size_t &) const;
-    void    addModeChange(std::string &, char &, char, char) const;
+    CommandChannelModePrepare   _prepare;
+    CommandChannelModeParameter _parameter;
+    CommandChannelModeOperator  _operator;
+    CommandChannelModeApply     _apply;
 };
 
 #endif

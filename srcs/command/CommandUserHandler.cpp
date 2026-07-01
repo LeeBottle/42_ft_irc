@@ -141,6 +141,7 @@ void    CommandUserHandler::sendRegistrationIfReady(Client &client,
         return ;
     queueReply(client, ":ircserv 001 " + client.getNickname()
         + " :Welcome to ircserv\r\n");
+    queueReply(client, ":ircserv 221 " + client.getNickname() + " +i\r\n");
 }
 
 void    CommandUserHandler::queueReply(Client &client, const std::string &message)

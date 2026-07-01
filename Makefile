@@ -3,6 +3,7 @@ NAME = ircserv
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 INCLUDES = -I includes
+DEPFLAGS = -MMD -MP
 
 SRC_DIR = srcs
 OBJ_DIR = obj
@@ -28,11 +29,17 @@ SRCS = main.cpp \
        command/CommandChannelInfo.cpp \
        command/CommandChannelOperator.cpp \
        command/CommandChannelMode.cpp \
+       command/CommandChannelModeEdit.cpp \
+       command/CommandChannelModePrepare.cpp \
+       command/CommandChannelModeApply.cpp \
+       command/CommandChannelModeParameter.cpp \
+       command/CommandChannelModeOperator.cpp \
        command/CommandUserHandler.cpp \
        server/Server.cpp \
        server/ServerSocket.cpp
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
+DEPS = $(OBJS:.o=.d)
 
 all: $(NAME)
 
@@ -41,7 +48,7 @@ $(NAME): $(OBJS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
 	rm -rf $(OBJ_DIR)
@@ -50,5 +57,7 @@ fclean: clean
 	rm -rf $(NAME)
 
 re: fclean all
+
+-include $(DEPS)
 
 .PHONY: all clean fclean re

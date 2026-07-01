@@ -1,7 +1,7 @@
 #include "channel/ChannelModeState.hpp"
 
 ChannelModeState::ChannelModeState()
-    : _topic(), _inviteOnly(false), _topicRestricted(false), _hasKey(false),
+    : _topic(), _inviteOnly(false), _topicRestricted(true), _hasKey(false),
       _key(), _hasLimit(false), _limit(0)
 {
 }
