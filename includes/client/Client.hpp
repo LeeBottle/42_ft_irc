@@ -3,20 +3,24 @@
 
 # include <string>
 
+# include "client/ReceiveBuffer.hpp"
+# include "client/SendBuffer.hpp"
+
 class Client
 {
 public:
     Client(int);
     ~Client();
 
-    const std::string   &getNickname() const;
-    const std::string   &getUsername() const;
-    const std::string   &getRealname() const;
+    const std::string   &nickname() const;
+    const std::string   &username() const;
+    const std::string   &realname() const;
+    ReceiveBuffer &receiveBuffer();
+    SendBuffer    &sendBuffer();
 
-    std::string getPrefix() const;
-    const char  *getSendData() const;
+    std::string prefix() const;
     
-    int     getFd() const;
+    int     fd() const;
     bool    hasPassword() const;
     bool    hasNickname() const;
     bool    hasUser() const;
@@ -24,23 +28,16 @@ public:
     void    acceptPassword();
     void    setNickname(const std::string &);
     void    setUser(const std::string &, const std::string &);
-    void    appendReceived(const char *, size_t);
-    const std::string   &getReceiveBuffer() const;
-    void    removeReceived(size_t);
-    void    queueSend(const std::string &);
-    bool    hasPendingSend() const;
-    size_t  getSendSize() const;
-    void    removeSent(size_t);
 
 private:
-    int         _fd;
-    bool        _hasPassword;
-    bool        _registered;
-    std::string _nickname;
-    std::string _username;
-    std::string _realname;
-    std::string _receiveBuffer;
-    std::string _sendBuffer;
+    int             _fd;
+    bool            _hasPassword;
+    bool            _registered;
+    std::string     _nickname;
+    std::string     _username;
+    std::string     _realname;
+    ReceiveBuffer   _receive;
+    SendBuffer      _send;
 
     void    updateRegistration();
 

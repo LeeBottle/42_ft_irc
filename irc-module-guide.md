@@ -1,75 +1,119 @@
-# IRC Server Module Guide
+# IRC 서버 모듈 가이드
 
-이 문서는 현재 `current.zip` 코드 기준으로 모듈 경계, 전체 실행 흐름, 테스트 방법, 예상 결과를 정리한 문서다.
+이 문서는 현재 수정된 코드 기준으로 모듈 경계, 실행 흐름, 각 모듈의 책임, 테스트 방법을 정리한 문서다.
 
-참고 근거:
+## 근거 자료
 
-- IRC 메시지 형식과 `CR-LF` 종료 규칙: [RFC 1459, 2.3 Messages](https://www.ietf.org/rfc/rfc1459.txt)
-- IRC command 목록과 의미: [RFC 1459, 4. Message details](https://www.ietf.org/rfc/rfc1459.txt)
+| 주제 | 링크 |
+|---|---|
+| IRC 메시지 형식, `CR-LF` 종료 규칙 | [RFC 1459 - 2.3 Messages](https://www.rfc-editor.org/rfc/rfc1459) |
+| IRC 명령 목록과 의미 | [RFC 1459 - 4 Message details](https://www.rfc-editor.org/rfc/rfc1459) |
+| `socket()` | [Linux man page - socket(2)](https://man7.org/linux/man-pages/man2/socket.2.html) |
+| `poll()` | [Linux man page - poll(2)](https://man7.org/linux/man-pages/man2/poll.2.html) |
+| `recv()` | [Linux man page - recv(2)](https://man7.org/linux/man-pages/man2/recv.2.html) |
+| `send()` | [Linux man page - send(2)](https://man7.org/linux/man-pages/man2/send.2.html) |
 
 ## 전체 구조
 
 ```text
 main
- -> Server
-    -> ServerSocket
+ -> server
+    -> Server
+    -> Listener
+    -> Poll
+    -> ClientIO
+    -> Signal
+ -> client
+    -> Client
     -> ClientManager
-    -> ClientPollEventHandler
+    -> ReceiveBuffer
+    -> SendBuffer
+ -> parser
     -> Parser
-    -> ServerMessageSwitch
-       -> CommandUser
-       -> CommandJoinPart
-       -> CommandMessage
-       -> CommandInfo
-       -> CommandInviteKick
-       -> CommandMode
+ -> serverMessage
+    -> Message
+ -> serverCommand
+    -> Command
+    -> serverClientCommand
+       -> ClientCommand
+    -> serverChannelCommand
+       -> CommandHelper
+       -> command
+          -> Join
+          -> Part
+          -> Privmsg
+          -> Names
+          -> Who
+          -> Topic
+          -> Invite
+          -> Kick
+       -> mode
+          -> Mode
+          -> ModeChecker
+          -> ModeParser
+          -> ModeApplier
+          -> ModeChange
+ -> channel
     -> ChannelManager
-       -> Channel
+    -> Channel
+    -> MemberList
+    -> OperatorList
+    -> InviteList
+    -> ModeState
 ```
 
-큰 기준은 아래처럼 나눈다.
+## 모듈 책임 요약
 
-| 모듈 | 역할 |
+| 모듈 | 책임 |
 |---|---|
-| `main` | 실행 인자 검증 후 `Server` 시작 |
-| `server` | socket 준비, `poll()` loop, client accept, terminal 입력, message 분기 |
-| `client` | 연결된 client 상태와 raw receive/send buffer 저장 |
-| `parser` | client receive buffer에서 `\r\n` 기준으로 한 줄을 꺼내고, name/params로 파싱 |
-| `command` | 파싱된 message를 보고 실제 IRC 명령 실행 |
+| `main` | 실행 인자 검사, port/password 검증, `Server` 시작 |
+| `server` | listen socket 준비, `poll()` loop, client accept, recv/send, terminal 입력 처리 |
+| `client` | 연결된 client 한 명의 상태와 receive/send buffer 저장 |
+| `parser` | 한 줄 IRC message를 command type과 params로 변환 |
+| `serverMessage` | client receive buffer에서 line을 꺼내고, `Parser`와 `Command` 흐름으로 연결 |
+| `serverCommand` | `PASS`, `JOIN`, `MODE` 같은 실제 IRC 명령 실행 |
 | `channel` | channel 상태, member/operator/invite/mode/topic 관리 |
+| `event` | `poll()` 호출과 system error 출력 |
 
-## 실행 흐름
+## 전체 실행 흐름
 
 ```mermaid
 flowchart TD
     A["main(argc, argv)"] --> B["Server::run()"]
-    B --> C["ServerSocket::setup()"]
-    C --> D["Server::runEventLoop()"]
-    D --> E["poll()"]
-    E --> F{"fd 종류"}
-    F -->|listen fd| G["acceptPendingClients()"]
-    F -->|client fd| H["ClientPollEventHandler::handleEvent()"]
-    F -->|stdin| I["handleTerminalInput()"]
-    H --> J["ClientSocketReceiver::receive()"]
-    J --> K["Client::appendReceived()"]
-    K --> L["Parser::popLine() / parse()"]
-    L --> M["ServerMessageSwitch::branch()"]
-    M --> N["Command...::execute...()"]
-    N --> O["Client::queueSend()"]
-    H --> P["ClientSocketSender::sendPending()"]
+    B --> C["Signal::setup()"]
+    C --> D["Listener::setup()"]
+    D --> E["Poll::build()"]
+    E --> F["Event::wait() / poll()"]
+    F --> G{"ready fd"}
+    G -->|listen fd| H["Server::acceptClients()"]
+    G -->|client fd| I["Server::handleClient()"]
+    G -->|stdin| J["Server::handleTerminal()"]
+    I --> K["ClientIO::receive()"]
+    K --> L["Message::process()"]
+    L --> M["ReceiveBuffer::pop()"]
+    M --> N["Message::handle()"]
+    N --> O["Parser::parse()"]
+    O --> P["Command::execute()"]
+    P --> Q["ClientCommand / channel command / Mode"]
+    Q --> R["SendBuffer::append()"]
+    I --> S["ClientIO::send()"]
 ```
 
-핵심 흐름은 이렇다.
+핵심 흐름은 아래처럼 보면 된다.
 
-1. `main.cpp`가 port/password를 검사한다.
-2. `Server`가 listen socket을 만들고 non-blocking으로 설정한다.
-3. `poll()`이 listen fd, client fd, server terminal 입력을 기다린다.
-4. 새 연결이면 `ServerSocket::acceptClient()` 후 `ClientManager::add()`로 client를 저장한다.
-5. client fd에 `POLLIN`이 오면 `recv()`로 bytes를 읽고 `Client` receive buffer에 저장한다.
-6. `Parser`가 receive buffer에서 `\r\n`까지 한 줄을 꺼내고, name/params로 나눈다.
-7. `ServerMessageSwitch`가 message name을 보고 어느 command 객체로 넘길지 분기한다.
-8. `Command...` 객체가 실제 명령을 처리하고 응답을 client send buffer에 쌓는다.
-9. 다음 `poll()`에서 해당 client fd에 `POLLOUT`이 잡히면 `send()`로 응답을 보낸다.
+```text
+TCP bytes
+ -> ClientIO::receive()
+ -> ReceiveBuffer
+ -> Message::process()
+ -> ReceiveBuffer::pop()
+ -> Message::handle()
+ -> Parser::parse()
+ -> Command::execute()
+ -> ClientCommand / channel command / Mode
+ -> SendBuffer
+ -> ClientIO::send()
+```
 
 ## `main` 모듈
 
@@ -79,22 +123,16 @@ flowchart TD
 |---|---|
 | `srcs/main.cpp` | 실행 인자 검사, port/password 검증, `Server` 생성 |
 
-### 상세
+### 책임
 
-`main`은 서버의 실제 동작을 처리하지 않는다. 시작 전에 값만 검사한다.
-
-| 함수 | 역할 |
-|---|---|
-| `convertPort()` | 문자열 port를 `int`로 변환. 숫자가 아니거나 `1~65535` 밖이면 실패 |
-| `isValidPassword()` | 빈 password, 너무 긴 password, `\0`, `\r`, `\n` 포함 여부 검사 |
-| `main()` | 인자 개수 검사 후 `Server server(port, password)` 생성, `server.run()` 실행 |
-
-예상 실패 출력:
+`main`은 서버 기능을 직접 처리하지 않는다. 실행 전에 port와 password가 쓸 수 있는 값인지 검사하고, 문제가 없으면 `Server`를 만든다.
 
 ```text
-Usage: ./ircserv <port> <password>
-Error: invalid port
-Error: invalid password
+argv 검사
+ -> port 변환
+ -> password 검사
+ -> Server server(port, password)
+ -> server.run()
 ```
 
 ## `server` 모듈
@@ -103,64 +141,59 @@ Error: invalid password
 
 | 파일 | 역할 |
 |---|---|
-| `Server.hpp/cpp` | 서버 전체 실행 흐름, signal, `poll()` loop, message 처리 |
-| `ServerSocket.hpp/cpp` | listen socket 생성, option 설정, bind/listen, accept |
-| `ServerMessageSwitch.hpp/cpp` | 파싱된 message name을 보고 실제 command 객체로 분기 |
+| `Server.hpp/cpp` | 서버 전체 흐름 조립, poll 결과 분기, receive buffer message 처리 |
+| `Listener.hpp/cpp` | listen socket 생성, option 설정, bind/listen, accept |
+| `Poll.hpp/cpp` | `pollfd` 목록 구성 |
+| `ClientIO.hpp/cpp` | client socket `recv()` / `send()` / 제거 |
+| `Signal.hpp/cpp` | `SIGINT`, `SIGQUIT` 종료 요청 처리 |
 
 ### `Server`
 
-`Server`는 전체 조립자다.
+`Server`는 네트워크 흐름의 중심이다. IRC 명령 자체를 실행하지 않는다.
 
 | 멤버 | 의미 |
 |---|---|
-| `_password` | PASS 명령 검증에 쓰는 서버 password |
+| `_password` | 서버 password. `Message` 생성 시 넘긴다 |
 | `_channels` | 전체 channel 목록 |
-| `_socket` | listen socket 담당 객체 |
+| `_listener` | listen socket 담당 |
 | `_clients` | 연결된 client 목록 |
-| `_messageSwitch` | 파싱된 message를 command 객체로 넘기는 분기점 |
-| `_clientPollEventHandler` | client fd의 `POLLIN`, `POLLOUT`, error 처리 |
+| `_poll` | poll 대상 fd 목록 생성 |
+| `_clientIO` | client fd의 receive/send 담당 |
+| `_message` | line을 parser와 command 실행 흐름으로 넘기는 입구 |
+| `_event` | `poll()` 호출 |
+| `_signal` | 종료 signal 상태 |
 
 `Server::run()` 흐름:
 
 ```text
-setupSignalHandler()
- -> ServerSocket::setup()
- -> runEventLoop()
+Signal::setup()
+ -> Listener::setup()
+ -> while (!shouldStop)
+    -> Poll::build()
+    -> Event::wait()
+    -> Server::handlePoll()
 ```
 
-`runEventLoop()` 흐름:
+`Server::handlePoll()`는 fd 종류별로 나눈다.
 
-```text
-buildPollFds()
- -> poll()
- -> handlePollEvents()
-```
-
-`buildPollFds()`는 세 종류의 fd를 준비한다.
-
-| fd | poll event |
+| fd 종류 | 처리 |
 |---|---|
-| server terminal `STDIN_FILENO` | `POLLIN` |
-| listen socket fd | `POLLIN` |
-| client fd | `POLLIN`, send buffer가 있으면 `POLLOUT` |
+| server terminal `STDIN_FILENO` | `DIE` 입력 확인 |
+| listen socket fd | 새 client accept |
+| client fd | `POLLIN`, `POLLOUT`, error 처리 |
 
-### Server terminal `DIE`
-
-현재 `DIE`는 client 명령이 아니다. 서버가 실행 중인 터미널에서 직접 입력해야 한다.
+`Message::process()`는 client receive buffer에서 `\r\n` 기준으로 line을 꺼낸다.
 
 ```text
-DIE
+while (client.receiveBuffer().pop(line))
+    handle(client, line)
 ```
 
-예상 결과:
+즉, `Server`는 client bytes를 receive buffer에 넣은 뒤 `Message`에 message 처리를 맡긴다. line 추출, parser 호출, command 실행 연결은 `serverMessage`가 담당한다.
 
-```text
-server shutting down
-```
+### `Listener`
 
-### `ServerSocket`
-
-`ServerSocket::setup()`은 아래 순서로 socket을 준비한다.
+`Listener::setup()` 흐름:
 
 ```text
 socket()
@@ -170,28 +203,49 @@ socket()
  -> listen()
 ```
 
-`acceptClient()`는 새 client fd를 accept한 뒤, client fd도 non-blocking으로 바꾼다.
+`acceptClient()`는 새 client fd를 만든 뒤, 그 fd도 non-blocking으로 바꾼다.
 
-예상 서버 출력:
+### `Poll`
+
+`Poll::build()`는 매 loop마다 poll 대상 목록을 다시 만든다.
+
+| 대상 | event |
+|---|---|
+| terminal stdin | `POLLIN` |
+| listen socket fd | `POLLIN` |
+| client fd | 기본 `POLLIN`, send buffer가 있으면 `POLLOUT` 추가 |
+
+### `ClientIO`
+
+`receive()`는 kernel socket receive buffer에서 bytes를 읽어서 `ReceiveBuffer`에 붙인다.
 
 ```text
-server is listening on port 6667
-client connected with fd 4
+kernel socket receive buffer
+ -> recv()
+ -> char buffer[512]
+ -> ReceiveBuffer::append()
 ```
 
-### `ServerMessageSwitch`
+`recv()` 결과별 처리:
 
-`ServerMessageSwitch`는 실행자가 아니라 분기점이다.
+| 결과 | 의미 | 처리 |
+|---|---|---|
+| `> 0` | bytes 읽음 | receive buffer에 저장 |
+| `0` | 상대가 연결 종료 | client 제거 |
+| `-1`, `EINTR` | signal 때문에 끊김 | 다시 시도 |
+| `-1`, `EAGAIN/EWOULDBLOCK` | 지금 더 읽을 데이터 없음 | 정상 종료 |
+| 그 외 | socket error | client 제거 |
 
-| message name | 실행 객체 |
-|---|---|
-| `PASS`, `NICK`, `USER`, `CAP`, `PING`, `PONG`, `QUIT` | `CommandUser` |
-| `JOIN`, `PART` | `CommandJoinPart` |
-| `PRIVMSG` | `CommandMessage` |
-| `NAMES`, `WHO`, `TOPIC` | `CommandInfo` |
-| `INVITE`, `KICK` | `CommandInviteKick` |
-| `MODE` | `CommandMode` |
-| 그 외 | `CommandUser::executeUnknown()` |
+`send()`는 `SendBuffer`에 쌓인 bytes를 kernel socket send buffer로 넘긴다.
+
+```text
+SendBuffer
+ -> send()
+ -> kernel socket send buffer
+ -> TCP로 client에게 전송
+```
+
+partial send가 가능하므로 실제로 보낸 byte 수만큼만 send buffer에서 제거한다.
 
 ## `client` 모듈
 
@@ -199,121 +253,54 @@ client connected with fd 4
 
 | 파일 | 역할 |
 |---|---|
-| `Client.hpp`, `Client.cpp` | client 한 명의 fd, 등록 상태, nickname/user/realname 보관 |
-| `ClientBuffer.cpp` | receive buffer, send buffer 저장과 제거 |
-| `ClientManager.hpp/cpp` | client 목록 생성/삭제/검색, poll fd 생성 |
-| `ClientPollEventHandler.hpp/cpp` | client fd의 poll event 분기 |
-| `ClientSocketReceiver.hpp/cpp` | `recv()`로 kernel socket buffer에서 bytes 읽기 |
-| `ClientSocketSender.hpp/cpp` | send buffer 내용을 `send()`로 kernel에 넘기기 |
+| `Client.hpp/cpp` | client fd, 등록 상태, nickname/user/realname, receive/send buffer 소유 |
+| `ClientManager.hpp/cpp` | client 생성, 삭제, fd/nickname 검색 |
+| `ReceiveBuffer.hpp/cpp` | `recv()`로 받은 raw bytes 저장, `\r\n` 기준 line 추출 |
+| `SendBuffer.hpp/cpp` | 나중에 `send()`할 bytes 저장 |
 
 ### `Client`
 
-`Client`는 연결된 터미널 한 명의 상태 저장소다. IRC message를 해석하지 않는다.
+`Client`는 연결된 client 한 명의 상태 저장소다.
 
 | 멤버 | 의미 |
 |---|---|
 | `_fd` | client socket fd |
-| `_hasPassword` | PASS 성공 여부 |
-| `_registered` | PASS + NICK + USER 완료 여부 |
+| `_hasPassword` | `PASS` 성공 여부 |
+| `_registered` | `PASS + NICK + USER` 완료 여부 |
 | `_nickname` | IRC nickname |
 | `_username` | IRC username |
 | `_realname` | IRC realname |
-| `_receiveBuffer` | `recv()`로 받은 raw bytes 저장 |
-| `_sendBuffer` | 나중에 `send()`할 응답 bytes 저장 |
+| `_receive` | 받은 raw bytes |
+| `_send` | 보낼 bytes |
 
 중요한 점:
 
 ```text
-Client는 \r\n을 해석하지 않는다.
-Client는 command 이름을 모른다.
-Client는 JOIN/MODE/PRIVMSG 의미를 모른다.
+Client는 IRC command 의미를 모른다.
+Client는 JOIN/MODE/PRIVMSG를 실행하지 않는다.
+Client는 자기 상태와 buffer만 가진다.
 ```
 
-### `ClientBuffer.cpp`
-
-receive 쪽:
+### `ReceiveBuffer`
 
 | 함수 | 역할 |
 |---|---|
-| `appendReceived()` | `recv()`로 받은 bytes를 `_receiveBuffer` 뒤에 붙임 |
-| `getReceiveBuffer()` | parser가 읽을 raw buffer를 반환 |
-| `removeReceived()` | parser가 소비한 앞쪽 bytes를 제거 |
+| `append()` | `recv()`로 받은 bytes를 뒤에 붙임 |
+| `pop()` | `\r\n` 기준으로 line 하나 꺼냄 |
+| `remove()` | 앞쪽 bytes 제거 |
+| `data()` | 현재 raw buffer 확인 |
 
-send 쪽:
+IRC message는 `CR-LF`, 즉 `\r\n`으로 끝난다. 그래서 `pop()`도 `\r\n`을 기준으로 line을 꺼낸다.
 
-| 함수 | 역할 |
-|---|---|
-| `queueSend()` | 보낼 message를 `_sendBuffer`에 저장 |
-| `hasPendingSend()` | 보낼 데이터가 남았는지 확인 |
-| `getSendData()` | `send()`에 넘길 pointer 반환 |
-| `getSendSize()` | 보낼 byte 수 반환 |
-| `removeSent()` | 이미 보낸 bytes 제거 |
-
-### `ClientManager`
-
-`ClientManager`는 client 목록을 소유한다.
+### `SendBuffer`
 
 | 함수 | 역할 |
 |---|---|
-| `add()` | 새 client 생성 |
-| `find()` | fd로 client 찾기 |
-| `findByNickname()` | nickname으로 client 찾기 |
-| `remove()` | client 삭제, 모든 channel에서도 제거 |
-| `appendPollFds()` | client fd들을 poll 대상에 추가 |
-| `isNicknameInUse()` | nickname 중복 검사 |
-
-client 삭제 시 channel에서도 제거하는 이유:
-
-```text
-client 연결 종료
- -> ClientManager::remove()
- -> ChannelManager::removeClientFromAll()
- -> 모든 channel member/operator/invite 목록에서 제거
-```
-
-### `ClientPollEventHandler`
-
-client fd의 `revents`를 보고 처리한다.
-
-| event | 처리 |
-|---|---|
-| `POLLERR`, `POLLHUP`, `POLLNVAL` | client 제거 |
-| `POLLIN` | `ClientSocketReceiver::receive()` |
-| `POLLOUT` | `ClientSocketSender::sendPending()` |
-
-### `ClientSocketReceiver`
-
-`recv()` 담당이다.
-
-```text
-kernel socket receive buffer
- -> recv()
- -> local char buffer[512]
- -> Client::appendReceived()
-```
-
-`recv()` 결과:
-
-| 결과 | 의미 | 처리 |
-|---|---|---|
-| `> 0` | bytes 읽음 | client receive buffer에 저장 |
-| `0` | peer close | client 제거 |
-| `-1`, `EINTR` | signal interrupt | 다시 시도 |
-| `-1`, `EAGAIN/EWOULDBLOCK` | 지금 더 읽을 것 없음 | 정상 종료 |
-| 그 외 error | socket 문제 | client 제거 |
-
-### `ClientSocketSender`
-
-`send()` 담당이다.
-
-```text
-Client send buffer
- -> send()
- -> kernel socket send buffer
- -> TCP로 client에게 전달
-```
-
-partial send가 날 수 있으므로 `bytesSent`만큼만 `removeSent()` 한다.
+| `append()` | 보낼 message 저장 |
+| `hasData()` | 보낼 데이터가 있는지 확인 |
+| `data()` | `send()`에 넘길 pointer 반환 |
+| `size()` | 보낼 byte 수 반환 |
+| `remove()` | 이미 보낸 bytes 제거 |
 
 ## `parser` 모듈
 
@@ -321,93 +308,180 @@ partial send가 날 수 있으므로 `bytesSent`만큼만 `removeSent()` 한다.
 
 | 파일 | 역할 |
 |---|---|
-| `Parser.hpp/cpp` | receive buffer에서 한 줄 추출, message name/params 파싱, 파싱 결과 보관 |
+| `Parser.hpp/cpp` | line을 command name, params, type으로 파싱 |
 
 ### `Parser`
 
-`Parser`는 두 가지를 같이 한다.
+현재 `Parser`는 receive buffer에서 line을 꺼내지 않는다. line 추출은 `ReceiveBuffer::pop()`이 한다.
 
-1. client receive buffer에서 `\r\n`까지 한 줄을 꺼낸다.
-2. 그 한 줄을 name/params로 나누고 자기 내부에 저장한다.
+`Parser`의 책임은 한 줄 문자열을 아래 값으로 바꾸는 것이다.
 
 | 멤버 | 의미 |
 |---|---|
-| `_name` | message 이름. 예: `PASS`, `NICK`, `JOIN`, `PRIVMSG` |
-| `_params` | message 인자 목록 |
+| `_name` | 대문자로 정규화된 command 이름 |
+| `_params` | command parameter 목록 |
+| `_type` | `Parser::Type` enum |
 
-| 함수 | 역할 |
-|---|---|
-| `popLine()` | client receive buffer에서 `\r\n` 기준으로 line 하나 꺼냄 |
-| `parse()` | line을 `_name`, `_params`로 분리 |
-| `getName()` | `_name` 반환 |
-| `getParams()` | `_params` 반환 |
-| `toUpper()` | message name을 대문자로 정규화 |
-
-예시:
+지원 type:
 
 ```text
-raw line:
+UNKNOWN, CAP, PING, PONG, QUIT,
+PASS, NICK, USER,
+JOIN, PART, PRIVMSG, NAMES, WHO, TOPIC,
+INVITE, KICK, MODE
+```
+
+파싱 예시:
+
+```text
+입력 line:
 PRIVMSG bob :hello bob
 
 Parser 결과:
 name   = PRIVMSG
+type   = Parser::PRIVMSG
 params = ["bob", "hello bob"]
 ```
 
-`toUpper()`가 있으므로 아래 입력은 모두 같은 command로 처리된다.
+`:`로 시작하는 trailing parameter는 뒤쪽 공백까지 하나의 parameter로 본다.
+
+```text
+TOPIC #test :hello world
+ -> params = ["#test", "hello world"]
+```
+
+command name은 대문자로 바꾼다.
 
 | 입력 | 내부 name |
 |---|---|
-| `JOIN` | `JOIN` |
 | `join` | `JOIN` |
 | `Join` | `JOIN` |
-| `JoIn` | `JOIN` |
+| `JOIN` | `JOIN` |
 
-## `command` 모듈
+## `serverMessage` 모듈
 
 ### 파일
 
 | 파일 | 역할 |
 |---|---|
-| `CommandBase` | command 공통 helper |
-| `CommandUser` | `PASS`, `NICK`, `USER`, `CAP`, `PING`, `PONG`, `QUIT`, unknown |
-| `CommandJoinPart` | `JOIN`, `PART` |
-| `CommandMessage` | `PRIVMSG` |
-| `CommandInfo` | `NAMES`, `WHO`, `TOPIC` |
-| `CommandInviteKick` | `INVITE`, `KICK` |
-| `CommandMode` | `MODE` 전체 흐름 |
-| `CommandModePrepare` | MODE 사전 검증 |
-| `CommandModeApply` | mode 문자열 순회와 적용 |
-| `CommandModeParameter` | `+k`, `+l` parameter mode 처리 |
-| `CommandModeOperator` | `+o`, `-o` 처리 |
-| `CommandModeEdit` | MODE 변경 결과 누적 |
+| `Message.hpp/cpp` | client receive buffer에서 line을 꺼내고, `Parser`와 `Command` 흐름으로 연결 |
 
-### `CommandBase`
+### 책임
 
-channel 관련 command에서 공유하는 helper다.
+`Message`는 실제 IRC 명령을 실행하지 않는다.
 
-| 함수 | 역할 |
+```text
+ReceiveBuffer
+ -> pop(line)
+ -> Parser::parse(line)
+ -> Command::execute(client, parser)
+```
+
+즉, `serverMessage`는 client receive buffer 안의 raw line들을 IRC message 처리 흐름으로 넘기는 모듈이다.
+
+| 할 일 | 여기서 처리 여부 |
 |---|---|
-| `isValidChannelName()` | `#`로 시작하는 channel 이름 검사 |
-| `sendNamesReply()` | `353`, `366` 응답 생성 |
-| `sendTopicReply()` | `331` 또는 `332` 응답 생성 |
-| `queueReply()` | client send buffer에 응답 저장 |
-| `getReplyTarget()` | nickname이 없으면 `*`, 있으면 nickname 반환 |
+| client receive buffer에서 `\r\n` 기준 line 추출 | 처리함 |
+| line을 `Parser`에 넘김 | 처리함 |
+| 빈 line 무시 | 처리함 |
+| command 실행 결과가 false면 연결 종료 신호 반환 | 처리함 |
+| command type에 맞는 실행 흐름으로 넘김 | `Command`에 위임 |
+| `JOIN`, `MODE`, `PRIVMSG` 실제 실행 | 처리하지 않음 |
+| channel/client 상태 변경 | 처리하지 않음 |
 
-### `CommandUser`
+## `serverCommand` 모듈
 
-등록과 기본 연결 명령을 처리한다.
+### 파일
 
-| 명령 | 함수 | 결과 |
+| 파일 | 역할 |
+|---|---|
+| `Command.hpp/cpp` | `Parser::Type`을 보고 실제 command 객체에 바로 위임 |
+| `serverClientCommand/ClientCommand.hpp/cpp` | 서버나 특정 nickname을 대상으로 하는 command 처리 |
+| `serverChannelCommand/CommandHelper.hpp/cpp` | channel command들이 공유하는 reply, names, topic, broadcast helper |
+| `serverChannelCommand/command/Join.hpp/cpp` | `JOIN` 처리 |
+| `serverChannelCommand/command/Part.hpp/cpp` | `PART` 처리 |
+| `serverChannelCommand/command/Privmsg.hpp/cpp` | `PRIVMSG #channel` 처리 |
+| `serverChannelCommand/command/Names.hpp/cpp` | `NAMES` 처리 |
+| `serverChannelCommand/command/Who.hpp/cpp` | `WHO` 처리 |
+| `serverChannelCommand/command/Topic.hpp/cpp` | `TOPIC` 처리 |
+| `serverChannelCommand/command/Invite.hpp/cpp` | `INVITE` 처리 |
+| `serverChannelCommand/command/Kick.hpp/cpp` | `KICK` 처리 |
+| `serverChannelCommand/mode/Mode.hpp/cpp` | `MODE` 전체 흐름 조립 |
+| `serverChannelCommand/mode/ModeChecker.hpp/cpp` | `MODE` 대상과 권한 검사 |
+| `serverChannelCommand/mode/ModeParser.hpp/cpp` | mode 문자열과 parameter 해석 |
+| `serverChannelCommand/mode/ModeApplier.hpp/cpp` | 수집된 mode 변경을 channel 상태에 적용 |
+| `serverChannelCommand/mode/ModeChange.hpp/cpp` | mode 변경 과정에서 공유하는 작은 자료 구조 |
+
+### `Command`
+
+`Command`는 `Parser::Type`을 보고 맞는 command 객체로 바로 연결한다.
+실제 command 로직은 직접 들고 있지 않는다.
+
+이름은 현재 위치에서 이미 드러나는 단어를 반복하지 않는다. `serverChannelCommand/command` 아래의 명령별 클래스는 `Join`, `Part`처럼 명령 이름만 남기고, 클래스가 이미 명령을 가리키면 함수도 `handle()`처럼 짧게 둔다.
+
+| 멤버 | 의미 |
+|---|---|
+| `_client` | 서버 자체나 nickname 대상 command 처리 |
+| `_join` | `JOIN` 처리 |
+| `_part` | `PART` 처리 |
+| `_privmsg` | channel 대상 `PRIVMSG` 처리 |
+| `_names` | `NAMES` 처리 |
+| `_who` | `WHO` 처리 |
+| `_topic` | `TOPIC` 처리 |
+| `_invite` | `INVITE` 처리 |
+| `_kick` | `KICK` 처리 |
+| `_mode` | `MODE` 처리 |
+
+`Command`는 중간 보따리 객체를 들고 있지 않는다. 생성할 때 필요한 값을 바로 넘긴다.
+
+```text
+ClientCommand  <- password, ClientManager
+Join / Part / ... <- ClientManager, ChannelManager
+Mode <- ClientManager, ChannelManager
+```
+
+```text
+Parser::JOIN
+ -> Command::execute()
+ -> Join::handle()
+```
+
+`Command`에는 별도 전달 함수가 없다. `execute()` 안에서 `Parser::Type`을 확인하고 바로 `_client` 또는 명령별 멤버로 넘긴다.
+
+```text
+Parser::PASS -> ClientCommand::pass()
+Parser::NICK -> ClientCommand::nick()
+Parser::JOIN -> Join::handle()
+Parser::MODE -> Mode::handle()
+```
+
+`PRIVMSG`만 대상 이름을 보고 한 번 더 갈라진다.
+
+| 대상 | 위임 |
+|---|---|
+| `PRIVMSG bob :hello` | `ClientCommand::privmsg()` |
+| `PRIVMSG #test :hello` | `Privmsg::handle()` |
+
+### `ClientCommand`
+
+서버 자체 또는 특정 nickname을 대상으로 하는 command를 처리한다.
+
+| 멤버 | 의미 |
+|---|---|
+| `_password` | `PASS` 검증용 server password |
+| `_clients` | nickname 중복 검사, nickname 대상 message 전송 |
+
+| 명령 | 함수 | 역할 |
 |---|---|---|
-| `PASS` | `executePass()` | password 검증, 성공 시 `_hasPassword = true` |
-| `NICK` | `executeNick()` | nickname 설정, 중복 검사 |
-| `USER` | `executeUser()` | username/realname 설정 |
-| `CAP` | `executeCap()` | irssi capability 요청에 빈 LS 응답 |
-| `PING` | `executePing()` | `PONG` 응답 |
-| `PONG` | `executePong()` | 현재는 무시 |
-| `QUIT` | `executeQuit()` | client 하나 종료 |
-| unknown | `executeUnknown()` | `421 Unknown command` |
+| `PASS` | `pass()` | password 검증 |
+| `NICK` | `nick()` | nickname 설정, 중복 검사 |
+| `USER` | `user()` | username, realname 설정 |
+| `CAP` | `cap()` | irssi capability 요청에 빈 LS 응답 |
+| `PING` | `ping()` | `PONG` 응답 |
+| `PONG` | `pong()` | 현재는 무시 |
+| `QUIT` | `quit()` | `ERROR :Closing Link` 후 연결 종료 요청 |
+| `PRIVMSG nick` | `privmsg()` | nickname 대상 개인 메시지 전송 |
+| unknown | `unknown()` | `421 Unknown command` |
 
 등록 완료 조건:
 
@@ -420,9 +494,34 @@ USER 설정
  -> 221 +i
 ```
 
-### `CommandJoinPart`
+### `serverChannelCommand/command`
 
-`JOIN`은 channel 생성/입장, `PART`는 channel 퇴장을 처리한다.
+`MODE`를 제외한 channel command는 명령 하나당 클래스 하나로 분리한다.
+각 클래스는 필요한 manager만 직접 멤버로 가진다.
+공유 동작 때문에 부모 클래스를 두지 않는다.
+
+공통 helper는 `CommandHelper`의 static 함수로만 둔다.
+
+| helper | 역할 |
+|---|---|
+| `reply()` | client send buffer에 응답 추가 |
+| `namesReply()` | `353`, `366` names 응답 추가 |
+| `topicReply()` | `331` 또는 `332` topic 응답 추가 |
+| `toAll()` | channel 전체 member에게 message 추가 |
+| `toOthers()` | sender를 제외한 member에게 message 추가 |
+| `target()` | nickname이 없으면 `*`, 있으면 nickname 반환 |
+| `validChannel()` | `#`로 시작하는 channel 이름 검사 |
+
+| 명령 | 클래스 | 역할 |
+|---|---|---|
+| `JOIN` | `Join` | channel 참가 |
+| `PART` | `Part` | channel 나가기 |
+| `PRIVMSG #channel` | `Privmsg` | channel member들에게 message 전송 |
+| `NAMES` | `Names` | channel member 목록 응답 |
+| `WHO` | `Who` | channel member 상세 목록 응답 |
+| `TOPIC` | `Topic` | topic 조회 또는 설정 |
+| `INVITE` | `Invite` | target client를 invite list에 추가 |
+| `KICK` | `Kick` | target client를 channel에서 제거 |
 
 `JOIN` 흐름:
 
@@ -431,9 +530,10 @@ USER 설정
  -> parameter 검사
  -> channel 이름 검사
  -> ChannelManager::findOrCreate()
- -> Channel::canJoin()
- -> Channel::addClient()
- -> JOIN broadcast
+ -> invite/key/limit 검사
+ -> member 추가
+ -> 첫 member면 operator 추가
+ -> JOIN message 전파
  -> topic 있으면 topic reply
  -> names reply
 ```
@@ -442,27 +542,24 @@ USER 설정
 
 ```text
 등록 여부 검사
+ -> parameter 검사
  -> channel 존재 검사
  -> member 여부 검사
- -> PART broadcast
- -> Channel::removeClient()
- -> 비었으면 ChannelManager::deleteIfEmpty()
+ -> PART message 전파
+ -> member/operator/invite에서 제거
+ -> channel이 비었으면 ChannelManager::removeEmpty()
 ```
 
-### `CommandMessage`
-
-`PRIVMSG`를 처리한다.
+`PRIVMSG #channel`은 channel member에게만 보낸다.
 
 | 대상 | 처리 |
 |---|---|
-| nickname | 해당 client의 send buffer에 message 저장 |
-| channel name | channel member들에게 broadcast |
+| sender가 channel member가 아님 | `404 Cannot send to channel` |
+| sender가 channel member임 | sender를 제외한 channel member들에게 message 추가 |
 
-현재 channel message는 sender에게 echo하지 않고 다른 member에게만 보낸다.
+현재 channel message는 sender에게 다시 echo하지 않는다.
 
-### `CommandInfo`
-
-조회성 명령과 topic 처리를 맡는다.
+조회성 명령과 topic 처리는 각각 별도 클래스에 있다.
 
 | 명령 | 역할 |
 |---|---|
@@ -470,36 +567,35 @@ USER 설정
 | `WHO` | channel member 상세 목록 응답 |
 | `TOPIC` | topic 조회 또는 설정 |
 
-`TOPIC`은 parameter 개수에 따라 다르게 동작한다.
+`TOPIC` 동작:
 
 | 입력 | 동작 |
 |---|---|
 | `TOPIC #test` | topic 조회 |
 | `TOPIC #test :hello` | topic 설정 |
 
-topic 설정은 channel mode `+t` 상태면 operator만 가능하다.
+channel mode가 `+t`이면 operator만 topic을 바꿀 수 있다.
 
-### `CommandInviteKick`
-
-operator 권한이 필요한 channel 명령을 처리한다.
+초대와 강퇴도 channel 안에서 일어나는 일이지만, 각각 별도 클래스에 있다.
 
 | 명령 | 역할 |
 |---|---|
-| `INVITE` | target client를 invite list에 추가하고 초대 message 전송 |
+| `INVITE` | target client를 channel invite list에 추가하고 초대 message 전송 |
 | `KICK` | target client를 channel에서 제거 |
 
-둘 다 sender가 channel operator인지 검사한다.
+둘 다 sender가 channel member인지, operator인지 검사한다.
 
-### `CommandMode`
+### `Mode`
 
-`MODE`는 여러 단계로 나눠 처리한다.
+`MODE`는 양이 많아서 별도 서브모듈로 분리했다. channel mode 변경을 중심으로 처리하고, `MODE nick`처럼 user mode 조회/응답 형태로 들어오는 입력도 여기서 최소 응답한다.
 
-```text
-CommandMode::executeMode()
- -> CommandModePrepare::shouldStop()
- -> CommandModeApply::applyModeString()
- -> CommandModeApply::broadcastModeChanges()
-```
+| 클래스 | 역할 |
+|---|---|
+| `Mode` | `MODE` 전체 흐름 조립 |
+| `ModeChecker` | 등록 여부, channel 존재, 권한 검사 |
+| `ModeParser` | mode 문자열과 parameter 해석 |
+| `ModeApplier` | 수집된 변경을 channel 상태에 적용 |
+| `ModeChange` | mode 변경 자료 구조 |
 
 지원 mode:
 
@@ -512,18 +608,38 @@ CommandMode::executeMode()
 | `+o`, `-o` | operator 부여/해제 |
 | `b` | ban list end 응답만 처리 |
 
+`MODE #test` 흐름:
+
+```text
+channel 존재 검사
+ -> mode string 응답
+ -> 324 nick #test +...
+```
+
+`MODE #test +o bob` 흐름:
+
+```text
+등록 여부 검사
+ -> channel 존재 검사
+ -> sender가 channel member인지 검사
+ -> sender가 operator인지 검사
+ -> bob이 channel member인지 검사
+ -> operator 추가
+ -> MODE 전파
+```
+
 ## `channel` 모듈
 
 ### 파일
 
 | 파일 | 역할 |
 |---|---|
-| `Channel` | channel 하나의 중심 객체 |
-| `ChannelManager` | channel 목록 생성/삭제/검색 |
-| `ChannelMemberList` | channel member 목록 |
-| `ChannelOperatorList` | channel operator 목록 |
-| `ChannelInviteList` | invite-only channel의 초대 목록 |
-| `ChannelModeState` | topic, invite-only, topic restriction, key, limit 상태 |
+| `Channel.hpp/cpp` | channel 하나의 중심 객체 |
+| `ChannelManager.hpp/cpp` | channel 목록 생성, 삭제, 검색 |
+| `MemberList.hpp/cpp` | member 목록 관리 |
+| `OperatorList.hpp/cpp` | operator 목록 관리 |
+| `InviteList.hpp/cpp` | invite 목록 관리 |
+| `ModeState.hpp/cpp` | topic, invite-only, topic restriction, key, limit 상태 |
 
 ### `Channel`
 
@@ -537,34 +653,48 @@ CommandMode::executeMode()
 | `_invites` | invite된 client 목록 |
 | `_modes` | topic/mode 상태 |
 
-`Channel::canJoin()` 결과:
-
-| 결과 | 의미 |
-|---|---|
-| `JOIN_ALLOWED` | 입장 가능 |
-| `JOIN_INVITE_ONLY` | `+i`인데 invite 없음 |
-| `JOIN_BAD_KEY` | `+k`인데 key 틀림 |
-| `JOIN_FULL` | `+l` limit 초과 |
-
-첫 client가 channel에 들어오면 자동으로 operator가 된다.
-
 ### `ChannelManager`
-
-channel 목록을 소유한다.
 
 | 함수 | 역할 |
 |---|---|
 | `findOrCreate()` | channel이 있으면 반환, 없으면 생성 |
 | `find()` | 이름으로 channel 찾기 |
-| `deleteIfEmpty()` | 비어 있으면 channel 삭제 |
+| `removeEmpty()` | member가 없으면 channel 삭제 |
 | `removeClientFromAll()` | client 종료 시 모든 channel에서 제거 |
 
-## 테스트 준비
+client가 연결 종료되면 모든 channel에서 제거되어야 한다.
+
+```text
+client close
+ -> ClientIO::remove()
+ -> ChannelManager::removeClientFromAll()
+ -> ClientManager::removeByFd()
+```
+
+## 모듈 경계 요약
+
+| 작업 | 담당 |
+|---|---|
+| socket 생성, bind, listen | `Listener` |
+| `pollfd` 목록 만들기 | `Poll` |
+| `poll()` 대기 | `Event` |
+| 새 client accept | `Server` + `Listener` |
+| client bytes 읽기 | `ClientIO` |
+| receive buffer 저장과 `pop()` 제공 | `ReceiveBuffer` |
+| receive buffer에서 line을 반복 처리 | `Message` |
+| line을 type/params로 파싱 | `Parser` |
+| 파싱된 message를 command 실행으로 넘기기 | `Message` |
+| command type으로 handler 선택 | `Command` |
+| 실제 IRC 명령 실행 | `ClientCommand`, 명령별 `channel command`, `Mode` |
+| client 상태 저장 | `Client` |
+| channel 상태 저장 | `Channel` |
+
+## 테스트
 
 ### 빌드
 
 ```sh
-make
+make fclean && make
 ```
 
 예상 결과:
@@ -600,21 +730,11 @@ DIE
 server shutting down
 ```
 
-`Ctrl-C`도 `SIGINT`로 종료된다.
+`Ctrl-C`도 signal 처리로 종료된다.
 
-## `nc` 테스트
+### `nc` 등록 테스트
 
-`nc`는 `-C` 옵션을 써야 한 줄마다 `\r\n`을 보낸다.
-
-### 1. 등록 성공
-
-터미널 A:
-
-```sh
-./ircserv 6667 pass
-```
-
-터미널 B:
+`nc`는 `-C` 옵션을 써야 한 줄 끝에 `\r\n`을 보낸다.
 
 ```sh
 nc -C localhost 6667
@@ -628,445 +748,31 @@ NICK alice
 USER alice 0 * :Alice
 ```
 
-예상 client 출력:
+예상 응답:
 
 ```text
 :ircserv 001 alice :Welcome to ircserv
 :ircserv 221 alice +i
 ```
 
-예상 server 출력:
-
-```text
-client connected with fd ...
-received from fd ...: PASS pass
-received from fd ...: NICK alice
-received from fd ...: USER alice 0 * :Alice
-```
-
-### 2. 소문자/mixed case command 확인
+### channel 기본 테스트
 
 입력:
 
 ```text
-join #test
-```
-
-예상 결과:
-
-```text
-:alice!alice@localhost JOIN #test
-:ircserv 353 alice = #test :@alice
-:ircserv 366 alice #test :End of /NAMES list
-```
-
-이유:
-
-```text
-Parser::toUpper()
- -> join, Join, JoIn 모두 JOIN으로 정규화
-```
-
-### 3. PING/PONG
-
-입력:
-
-```text
-PING hello
-```
-
-예상 출력:
-
-```text
-:ircserv PONG ircserv :hello
-```
-
-### 4. Unknown command
-
-입력:
-
-```text
-HELLO
-```
-
-예상 출력:
-
-```text
-:ircserv 421 alice HELLO :Unknown command
-```
-
-### 5. QUIT
-
-입력:
-
-```text
-QUIT :bye
-```
-
-예상 출력:
-
-```text
-:ircserv ERROR :Closing Link
-```
-
-예상 동작:
-
-```text
-해당 client 연결만 종료
-서버는 계속 실행
-```
-
-## 다중 client 테스트
-
-터미널 A:
-
-```sh
-./ircserv 6667 pass
-```
-
-터미널 B:
-
-```sh
-nc -C localhost 6667
-```
-
-Alice 등록:
-
-```text
-PASS pass
-NICK alice
-USER alice 0 * :Alice
 JOIN #test
-```
-
-터미널 C:
-
-```sh
-nc -C localhost 6667
-```
-
-Bob 등록:
-
-```text
-PASS pass
-NICK bob
-USER bob 0 * :Bob
-JOIN #test
-```
-
-예상:
-
-```text
-Alice 쪽에 Bob JOIN broadcast가 보임
-Bob 쪽에 JOIN, NAMES 응답이 보임
-```
-
-Bob이 입력:
-
-```text
-PRIVMSG #test :hello alice
-```
-
-Alice 예상 출력:
-
-```text
-:bob!bob@localhost PRIVMSG #test :hello alice
-```
-
-Bob 자신에게는 echo되지 않는 것이 현재 구현 기준이다.
-
-## channel command 테스트
-
-### NAMES
-
-입력:
-
-```text
-NAMES #test
-```
-
-예상:
-
-```text
-:ircserv 353 alice = #test :@alice bob
-:ircserv 366 alice #test :End of /NAMES list
-```
-
-operator 표시 `@`는 channel operator에게 붙는다.
-
-### WHO
-
-입력:
-
-```text
-WHO #test
-```
-
-예상:
-
-```text
-:ircserv 352 alice #test alice localhost ircserv alice H :0 Alice
-:ircserv 352 alice #test bob localhost ircserv bob H :0 Bob
-:ircserv 315 alice #test :End of WHO list
-```
-
-### TOPIC 설정과 조회
-
-Alice가 입력:
-
-```text
-TOPIC #test :hello topic
-```
-
-예상 broadcast:
-
-```text
-:alice!alice@localhost TOPIC #test :hello topic
-```
-
-Bob이 입력:
-
-```text
+MODE #test
+TOPIC #test :hello
 TOPIC #test
 ```
 
-예상:
+예상 흐름:
 
 ```text
-:ircserv 332 bob #test :hello topic
+JOIN 전파
+353 names reply
+366 end of names
+324 mode reply
+TOPIC 전파
+332 topic reply
 ```
-
-### MODE +t
-
-Alice가 입력:
-
-```text
-MODE #test +t
-```
-
-예상 broadcast:
-
-```text
-:alice!alice@localhost MODE #test +t
-```
-
-Bob이 topic 변경 시도:
-
-```text
-TOPIC #test :bob topic
-```
-
-예상:
-
-```text
-:ircserv 482 bob #test :You're not channel operator
-```
-
-### MODE +i와 INVITE
-
-Alice:
-
-```text
-MODE #test +i
-```
-
-Kevin이 invite 없이 join:
-
-```text
-PASS pass
-NICK kevin
-USER kevin 0 * :Kevin
-JOIN #test
-```
-
-예상:
-
-```text
-:ircserv 473 kevin #test :Cannot join channel (+i)
-```
-
-Alice가 Kevin 초대:
-
-```text
-INVITE kevin #test
-```
-
-Kevin 예상:
-
-```text
-:alice!alice@localhost INVITE kevin :#test
-```
-
-Kevin이 다시 join:
-
-```text
-JOIN #test
-```
-
-예상:
-
-```text
-JOIN 성공
-```
-
-### MODE +k
-
-Alice:
-
-```text
-MODE #test +k secret
-```
-
-새 client가 key 없이 join:
-
-```text
-JOIN #test
-```
-
-예상:
-
-```text
-:ircserv 475 <nick> #test :Cannot join channel (+k)
-```
-
-key 포함 join:
-
-```text
-JOIN #test secret
-```
-
-예상:
-
-```text
-JOIN 성공
-```
-
-### MODE +l
-
-Alice:
-
-```text
-MODE #test +l 2
-```
-
-이미 2명이 있는 상태에서 세 번째 client가 join:
-
-```text
-JOIN #test
-```
-
-예상:
-
-```text
-:ircserv 471 <nick> #test :Cannot join channel (+l)
-```
-
-### MODE +o
-
-Alice:
-
-```text
-MODE #test +o bob
-```
-
-예상 broadcast:
-
-```text
-:alice!alice@localhost MODE #test +o bob
-```
-
-이후 Bob도 operator 권한 명령을 사용할 수 있다.
-
-### KICK
-
-Alice:
-
-```text
-KICK #test bob :bye
-```
-
-예상 broadcast:
-
-```text
-:alice!alice@localhost KICK #test bob :bye
-```
-
-예상 동작:
-
-```text
-Bob은 #test member list에서 제거됨
-```
-
-## irssi 테스트
-
-서버:
-
-```sh
-./ircserv 6667 pass
-```
-
-irssi:
-
-```sh
-irssi -c localhost -p 6667 -w pass -n alice
-```
-
-irssi 안에서:
-
-```text
-/join #test
-/names #test
-/topic #test hello topic
-/msg #test hello everyone
-/who #test
-/mode #test +t
-```
-
-예상:
-
-```text
-접속 후 welcome과 +i 표시
-JOIN 성공
-NAMES 목록 표시
-TOPIC 설정/조회 가능
-채널 메시지 전달 가능
-WHO 목록에 nick/user/realname 표시
-```
-
-Bob도 접속:
-
-```sh
-irssi -c localhost -p 6667 -w pass -n bob
-```
-
-Bob이 `/join #test` 후 Alice가 `/msg #test hello bob` 입력하면 Bob의 `#test` window에 메시지가 표시된다.
-
-## 현재 구현 기준 체크리스트
-
-| 항목 | 현재 상태 |
-|---|---|
-| port/password 인자 검사 | 구현됨 |
-| non-blocking listen socket | 구현됨 |
-| `poll()` event loop | 구현됨 |
-| client raw buffer 저장 | 구현됨 |
-| `\r\n` 기준 message 추출 | `Parser::popLine()` |
-| command name 대문자 정규화 | `Parser::toUpper()` |
-| PASS/NICK/USER 등록 | 구현됨 |
-| PING/PONG | 구현됨 |
-| JOIN/PART | 구현됨 |
-| PRIVMSG user/channel | 구현됨 |
-| NAMES/WHO/TOPIC | 구현됨 |
-| INVITE/KICK | 구현됨 |
-| MODE `i/t/k/l/o/b` | 구현됨 |
-| QUIT | client 하나 종료 |
-| DIE | server terminal 입력으로만 종료 |
-
-## 주의할 점
-
-- `DIE`는 IRC client command가 아니다. 서버 터미널에서만 입력한다.
-- `QUIT`은 client 하나만 종료한다.
-- `Client`는 command를 해석하지 않는다.
-- `Parser`가 message name을 대문자로 정규화하므로 `join`, `Join`, `JoIn`도 `JOIN`으로 처리된다.
-- `PRIVMSG` channel message는 sender에게 echo하지 않는다.
-- `ClientManager::remove()`는 client를 지우기 전에 모든 channel에서 client를 제거한다.
-- channel이 비면 `ChannelManager::deleteIfEmpty()` 또는 `removeClientFromAll()` 흐름에서 삭제된다.

@@ -1,15 +1,14 @@
 #include "client/ClientManager.hpp"
-#include "channel/ChannelManager.hpp"
 #include "client/Client.hpp"
 
-ClientManager::ClientManager(ChannelManager &channels)
-    : _clients(), _channels(channels)
+ClientManager::ClientManager()
+    : _clients()
 {
 }
 
 ClientManager::~ClientManager()
 {
-    closeAll();
+    clear();
 }
 
 Client  *ClientManager::add(int clientFd)
@@ -21,14 +20,14 @@ Client  *ClientManager::add(int clientFd)
     return (client);
 }
 
-Client  *ClientManager::find(int clientFd)
+Client  *ClientManager::findByFd(int clientFd)
 {
     std::vector<Client *>::iterator it;
 
     it = _clients.begin();
     while (it != _clients.end())
     {
-        if ((*it)->getFd() == clientFd)
+        if ((*it)->fd() == clientFd)
             return (*it);
         ++it;
     }
@@ -42,23 +41,27 @@ Client  *ClientManager::findByNickname(const std::string &nickname)
     it = _clients.begin();
     while (it != _clients.end())
     {
-        if ((*it)->getNickname() == nickname)
+        if ((*it)->nickname() == nickname)
             return (*it);
         ++it;
     }
     return (NULL);
 }
 
-void    ClientManager::remove(int clientFd)
+const std::vector<Client *> &ClientManager::clients() const
+{
+    return (_clients);
+}
+
+void    ClientManager::removeByFd(int clientFd)
 {
     std::vector<Client *>::iterator it;
 
     it = _clients.begin();
     while (it != _clients.end())
     {
-        if ((*it)->getFd() == clientFd)
+        if ((*it)->fd() == clientFd)
         {
-            _channels.removeClientFromAllChannels(*it);
             delete *it;
             _clients.erase(it);
             return ;
@@ -67,36 +70,17 @@ void    ClientManager::remove(int clientFd)
     }
 }
 
-void    ClientManager::closeAll()
+void    ClientManager::clear()
 {
     std::vector<Client *>::iterator it;
 
     it = _clients.begin();
     while (it != _clients.end())
     {
-        _channels.removeClientFromAllChannels(*it);
         delete *it;
         ++it;
     }
     _clients.clear();
-}
-
-void    ClientManager::appendPollFds(std::vector<struct pollfd> &pollFds) const
-{
-    std::vector<Client *>::const_iterator   it;
-    struct pollfd                           pollFd;
-
-    it = _clients.begin();
-    while (it != _clients.end())
-    {
-        pollFd.fd = (*it)->getFd();
-        pollFd.events = POLLIN;
-        if ((*it)->hasPendingSend())
-            pollFd.events |= POLLOUT;
-        pollFd.revents = 0;
-        pollFds.push_back(pollFd);
-        ++it;
-    }
 }
 
 bool    ClientManager::isNicknameInUse(const std::string &nickname,
@@ -107,7 +91,7 @@ bool    ClientManager::isNicknameInUse(const std::string &nickname,
     it = _clients.begin();
     while (it != _clients.end())
     {
-        if (*it != &owner && (*it)->getNickname() == nickname)
+        if (*it != &owner && (*it)->nickname() == nickname)
             return (true);
         ++it;
     }

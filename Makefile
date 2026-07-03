@@ -11,32 +11,38 @@ OBJ_DIR = obj
 SRCS = main.cpp \
        channel/Channel.cpp \
        channel/ChannelManager.cpp \
-       channel/ChannelInviteList.cpp \
-       channel/ChannelMemberList.cpp \
-       channel/ChannelModeState.cpp \
-       channel/ChannelOperatorList.cpp \
+       channel/InviteList.cpp \
+       channel/MemberList.cpp \
+       channel/ModeState.cpp \
+       channel/OperatorList.cpp \
        client/Client.cpp \
-       client/ClientBuffer.cpp \
        client/ClientManager.cpp \
-       client/ClientPollEventHandler.cpp  \
-       client/ClientSocketReceiver.cpp    \
-       client/ClientSocketSender.cpp      \
+       client/ReceiveBuffer.cpp \
+       client/SendBuffer.cpp \
+       event/Event.cpp \
        parser/Parser.cpp \
-       command/CommandBase.cpp \
-       command/CommandJoinPart.cpp \
-       command/CommandMessage.cpp \
-       command/CommandInfo.cpp \
-       command/CommandInviteKick.cpp \
-       command/CommandMode.cpp \
-       command/CommandModeEdit.cpp \
-       command/CommandModePrepare.cpp \
-       command/CommandModeApply.cpp \
-       command/CommandModeParameter.cpp \
-       command/CommandModeOperator.cpp \
-       command/CommandUser.cpp \
+       server/Listener.cpp \
        server/Server.cpp \
-       server/ServerMessageSwitch.cpp \
-       server/ServerSocket.cpp
+       server/ClientIO.cpp \
+       server/Poll.cpp \
+       server/Signal.cpp \
+       serverMessage/Message.cpp \
+       serverCommand/Command.cpp \
+       serverCommand/serverClientCommand/ClientCommand.cpp \
+       serverCommand/serverChannelCommand/CommandHelper.cpp \
+       serverCommand/serverChannelCommand/command/Join.cpp \
+       serverCommand/serverChannelCommand/command/Part.cpp \
+       serverCommand/serverChannelCommand/command/Privmsg.cpp \
+       serverCommand/serverChannelCommand/command/Names.cpp \
+       serverCommand/serverChannelCommand/command/Who.cpp \
+       serverCommand/serverChannelCommand/command/Topic.cpp \
+       serverCommand/serverChannelCommand/command/Invite.cpp \
+       serverCommand/serverChannelCommand/command/Kick.cpp \
+       serverCommand/serverChannelCommand/mode/ModeChange.cpp \
+       serverCommand/serverChannelCommand/mode/ModeChecker.cpp \
+       serverCommand/serverChannelCommand/mode/ModeParser.cpp \
+       serverCommand/serverChannelCommand/mode/ModeApplier.cpp \
+       serverCommand/serverChannelCommand/mode/Mode.cpp \
 
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 DEPS = $(OBJS:.o=.d)

@@ -7,9 +7,12 @@
 
 # include "channel/ChannelManager.hpp"
 # include "client/ClientManager.hpp"
-# include "client/ClientPollEventHandler.hpp"
-# include "server/ServerMessageSwitch.hpp"
-# include "server/ServerSocket.hpp"
+# include "event/Event.hpp"
+# include "server/Listener.hpp"
+# include "server/ClientIO.hpp"
+# include "server/Poll.hpp"
+# include "server/Signal.hpp"
+# include "serverMessage/Message.hpp"
 
 class Server
 {
@@ -21,26 +24,24 @@ public:
 
 private:
     std::string             _password;
-    ChannelManager          _channels;
-    ServerSocket            _socket;
     ClientManager           _clients;
-    ServerMessageSwitch     _messageSwitch;
-    ClientPollEventHandler  _clientPollEventHandler;
+    ChannelManager          _channels;
+    Listener                _listener;
+    Poll                    _poll;
+    ClientIO                _clientIO;
+    Message                 _message;
+    Event                   _event;
+    Signal                  _signal;
 
     Server();
     Server(const Server &);
     Server &operator=(const Server &);
 
-    bool    setupSignalHandler();
-    bool    runEventLoop();
-    bool    acceptPendingClients();
-    bool    processReceivedMessages(Client &);
-    void    appendTerminalPollFd(std::vector<struct pollfd> &) const;
-    void    buildPollFds(std::vector<struct pollfd> &) const;
-    void    handlePollEvents(std::vector<struct pollfd> &);
-    void    handleTerminalInput();
-    bool    shouldStop() const;
-    bool    reportSystemError(const char *);
+    bool    acceptClients();
+    void    handleClient(int, short);
+    void    handlePoll(std::vector<struct pollfd> &);
+    void    handleTerminal();
+
 };
 
 #endif

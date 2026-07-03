@@ -8,7 +8,7 @@ ChannelManager::ChannelManager()
 
 ChannelManager::~ChannelManager()
 {
-    clearAllChannels();
+    clear();
 }
 
 Channel *ChannelManager::findOrCreate(const std::string &name)
@@ -16,7 +16,7 @@ Channel *ChannelManager::findOrCreate(const std::string &name)
     Channel *found;
     Channel *created;
 
-    found = findChannel(name);
+    found = find(name);
     if (found != NULL)
         return (found);
 
@@ -25,7 +25,7 @@ Channel *ChannelManager::findOrCreate(const std::string &name)
     return (created);
 }
 
-void    ChannelManager::removeClientFromAllChannels(Client *client)
+void    ChannelManager::removeClientFromAll(Client *client)
 {
     std::vector<Channel *>::iterator it;
     Channel                          *channel;
@@ -34,8 +34,10 @@ void    ChannelManager::removeClientFromAllChannels(Client *client)
     while (it != _channels.end())
     {
         channel = *it;
-        channel->removeClient(client);
-        if (channel->isEmpty())
+        channel->members().remove(client);
+        channel->operators().remove(client);
+        channel->invites().remove(client);
+        if (channel->members().isEmpty())
         {
             delete channel;
             it = _channels.erase(it);
@@ -45,25 +47,25 @@ void    ChannelManager::removeClientFromAllChannels(Client *client)
     }
 }
 
-Channel *ChannelManager::findChannel(const std::string &name)
+Channel *ChannelManager::find(const std::string &name)
 {
     std::vector<Channel *>::iterator it;
 
     it = _channels.begin();
     while (it != _channels.end())
     {
-        if ((*it)->getName() == name)
+        if ((*it)->name() == name)
             return (*it);
         ++it;
     }
     return (NULL);
 }
 
-void    ChannelManager::removeEmptyChannel(Channel *channel)
+void    ChannelManager::removeEmpty(Channel *channel)
 {
     std::vector<Channel *>::iterator it;
 
-    if (channel == NULL || !channel->isEmpty())
+    if (channel == NULL || !channel->members().isEmpty())
         return ;
 
     it = _channels.begin();
@@ -79,7 +81,7 @@ void    ChannelManager::removeEmptyChannel(Channel *channel)
     }
 }
 
-void    ChannelManager::clearAllChannels()
+void    ChannelManager::clear()
 {
     std::vector<Channel *>::iterator it;
 

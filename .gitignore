@@ -1,4 +1,5 @@
 obj/
+provided_code_cpp/
 *.o
 ircserv
 *.pdf

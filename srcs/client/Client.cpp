@@ -4,7 +4,7 @@
 
 Client::Client(int fd)
     : _fd(fd), _hasPassword(false), _registered(false), _nickname(),
-    _username(), _realname(), _receiveBuffer(), _sendBuffer()
+      _username(), _realname(), _receive(), _send()
 {
 }
 
@@ -17,27 +17,37 @@ Client::~Client()
     }
 }
 
-int Client::getFd() const
+int Client::fd() const
 {
     return (_fd);
 }
 
-const std::string   &Client::getNickname() const
+const std::string   &Client::nickname() const
 {
     return (_nickname);
 }
 
-const std::string   &Client::getUsername() const
+const std::string   &Client::username() const
 {
     return (_username);
 }
 
-const std::string   &Client::getRealname() const
+const std::string   &Client::realname() const
 {
     return (_realname);
 }
 
-std::string Client::getPrefix() const
+ReceiveBuffer &Client::receiveBuffer()
+{
+    return (_receive);
+}
+
+SendBuffer    &Client::sendBuffer()
+{
+    return (_send);
+}
+
+std::string Client::prefix() const
 {
     if (_nickname.empty())
         return ("*");
