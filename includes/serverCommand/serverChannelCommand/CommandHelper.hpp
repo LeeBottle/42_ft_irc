@@ -1,30 +1,19 @@
-#ifndef COMMANDHELPER_HPP
-# define COMMANDHELPER_HPP
+#ifndef COMMAND_HELPER_HPP
+# define COMMAND_HELPER_HPP
 
 # include <string>
 
 class Channel;
 class Client;
 
-class CommandHelper
-{
-public:
-    static bool                 validChannel(const std::string &);
-    static void                 reply(Client &, const std::string &);
-    static void                 namesReply(Client &, Channel &);
-    static void                 topicReply(Client &, Channel &);
-    static void                 toAll(Channel &,
-                                    const std::string &);
-    static void                 toOthers(Channel &, Client &,
-                                    const std::string &);
-    static const std::string    &target(Client &);
-    static std::string          memberNames(Channel &);
+bool    commandValidChannel(const std::string &name);
+void    commandReply(Client &client, const std::string &message);
+void    commandNamesReply(Client &client, Channel &channel);
+void    commandTopicReply(Client &client, Channel &channel);
+void    commandToAll(Channel &channel, const std::string &message);
+void    commandToOthers(Channel &channel, Client &sender, const std::string &message);
 
-private:
-    CommandHelper();
-    CommandHelper(const CommandHelper &);
-    CommandHelper &operator=(const CommandHelper &);
-    ~CommandHelper();
-};
+std::string commandTarget(Client &client);
+std::string commandMemberNames(Channel &channel);
 
 #endif

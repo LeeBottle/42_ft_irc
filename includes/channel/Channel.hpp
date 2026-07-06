@@ -24,11 +24,11 @@ public:
     ModeState     &modes();
 
 private:
-    std::string         _name;
-    MemberList          _members;
-    OperatorList        _operators;
-    InviteList          _invites;
-    ModeState           _modes;
+    std::string     _name;
+    MemberList      _members;
+    OperatorList    _operators;
+    InviteList      _invites;
+    ModeState       _modes;
 
     Channel();
     Channel(const Channel &);

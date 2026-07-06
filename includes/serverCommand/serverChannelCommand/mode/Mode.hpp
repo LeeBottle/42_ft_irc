@@ -30,8 +30,7 @@ private:
     Mode(const Mode &);
     Mode &operator=(const Mode &);
 
-    void                broadcast(Client &, Channel &,
-                            const ModeChange &) const;
+    void    broadcast(Client &, Channel &, const ModeChange &) const;
 };
 
 #endif

@@ -4,13 +4,14 @@
 
 #include <vector>
 
-bool    CommandHelper::validChannel(
-    const std::string &name)
+
+bool    commandValidChannel(const std::string &name)
 {
-    size_t index;
+    size_t  index;
 
     if (name.size() < 2 || name[0] != '#')
         return (false);
+
     index = 0;
     while (index < name.size())
     {
@@ -19,42 +20,43 @@ bool    CommandHelper::validChannel(
             return (false);
         ++index;
     }
+
     return (true);
 }
 
-void    CommandHelper::reply(Client &client,
-    const std::string &message)
+
+void    commandReply(Client &client, const std::string &message)
 {
     client.sendBuffer().append(message);
 }
 
-void    CommandHelper::namesReply(Client &client,
-    Channel &channel)
+
+void    commandNamesReply(Client &client, Channel &channel)
 {
-    reply(client, ":ircserv 353 " + target(client)
-        + " = " + channel.name() + " :" + memberNames(channel) + "\r\n");
-    reply(client, ":ircserv 366 " + target(client)
+    commandReply(client, ":ircserv 353 " + commandTarget(client)
+        + " = " + channel.name() + " :" + commandMemberNames(channel)
+        + "\r\n");
+    commandReply(client, ":ircserv 366 " + commandTarget(client)
         + " " + channel.name() + " :End of /NAMES list\r\n");
 }
 
-void    CommandHelper::topicReply(Client &client,
-    Channel &channel)
+
+void    commandTopicReply(Client &client, Channel &channel)
 {
     if (channel.modes().topic().empty())
-        reply(client, ":ircserv 331 " + target(client)
+        commandReply(client, ":ircserv 331 " + commandTarget(client)
             + " " + channel.name() + " :No topic is set\r\n");
     else
-        reply(client, ":ircserv 332 " + target(client)
+        commandReply(client, ":ircserv 332 " + commandTarget(client)
             + " " + channel.name() + " :" + channel.modes().topic()
             + "\r\n");
 }
 
-void    CommandHelper::toAll(Channel &channel,
-    const std::string &message)
+
+void    commandToAll(Channel &channel, const std::string &message)
 {
     std::vector<Client *>::const_iterator   it;
-    const std::vector<Client *>             &members =
-        channel.members().all();
+    const std::vector<Client *>             &members = channel.members().all();
 
     it = members.begin();
     while (it != members.end())
@@ -64,12 +66,12 @@ void    CommandHelper::toAll(Channel &channel,
     }
 }
 
-void    CommandHelper::toOthers(Channel &channel,
-    Client &sender, const std::string &message)
+
+void    commandToOthers(Channel &channel, Client &sender,
+    const std::string &message)
 {
     std::vector<Client *>::const_iterator   it;
-    const std::vector<Client *>             &members =
-        channel.members().all();
+    const std::vector<Client *>             &members = channel.members().all();
 
     it = members.begin();
     while (it != members.end())
@@ -80,21 +82,20 @@ void    CommandHelper::toOthers(Channel &channel,
     }
 }
 
-const std::string   &CommandHelper::target(
-    Client &client)
-{
-    static const std::string unknownTarget = "*";
 
+std::string commandTarget(Client &client)
+{
     if (client.hasNickname())
         return (client.nickname());
-    return (unknownTarget);
+
+    return ("*");
 }
 
-std::string CommandHelper::memberNames(Channel &channel)
+
+std::string commandMemberNames(Channel &channel)
 {
     std::vector<Client *>::const_iterator   it;
-    const std::vector<Client *>             &members =
-        channel.members().all();
+    const std::vector<Client *>             &members = channel.members().all();
     std::string                             names;
 
     it = members.begin();
@@ -104,11 +105,14 @@ std::string CommandHelper::memberNames(Channel &channel)
         {
             if (!names.empty())
                 names += " ";
+
             if (channel.operators().has(*it))
                 names += "@";
+
             names += (*it)->nickname();
         }
         ++it;
     }
+
     return (names);
 }

@@ -23,8 +23,7 @@ private:
     Privmsg(const Privmsg &);
     Privmsg &operator=(const Privmsg &);
 
-    void    sendToChannel(Client &, const std::string &,
-                const std::string &);
+    void    sendToChannel(Client &, const std::string &, const std::string &);
 };
 
 #endif

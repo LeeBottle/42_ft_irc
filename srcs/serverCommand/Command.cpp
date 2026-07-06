@@ -4,20 +4,27 @@
 
 #include <vector>
 
-Command::Command(const std::string &password,
-    ClientManager &clients, ChannelManager &channels)
+
+Command::Command(const std::string &password, ClientManager &clients,
+    ChannelManager &channels)
     : _client(password, clients),
-      _join(clients, channels), _part(clients, channels),
-      _privmsg(clients, channels), _names(clients, channels),
-      _who(clients, channels), _topic(clients, channels),
-      _invite(clients, channels), _kick(clients, channels),
+      _join(clients, channels),
+      _part(clients, channels),
+      _privmsg(clients, channels),
+      _names(clients, channels),
+      _who(clients, channels),
+      _topic(clients, channels),
+      _invite(clients, channels),
+      _kick(clients, channels),
       _mode(clients, channels)
 {
 }
 
+
 Command::~Command()
 {
 }
+
 
 bool    Command::execute(Client &client, const Parser &message)
 {
@@ -47,6 +54,7 @@ bool    Command::execute(Client &client, const Parser &message)
 
         if (!params.empty() && !params[0].empty() && params[0][0] == '#')
             return (_privmsg.handle(client, message));
+
         return (_client.privmsg(client, message));
     }
     case Parser::NAMES:

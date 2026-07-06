@@ -6,19 +6,20 @@
 
 #include <vector>
 
-Who::Who(ClientManager &clients,
-    ChannelManager &channels)
+
+Who::Who(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {
     (void)clients;
 }
 
+
 Who::~Who()
 {
 }
 
-bool    Who::handle(Client &client,
-    const Parser &message)
+
+bool    Who::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>          &params = message.params();
     Channel                                 *channel;
@@ -26,18 +27,17 @@ bool    Who::handle(Client &client,
     std::string                             realname;
 
     if (!client.isRegistered())
-        CommandHelper::reply(client, ":ircserv 451 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 451 " + commandTarget(client)
             + " :You have not registered\r\n");
     else if (params.empty())
-        CommandHelper::reply(client, ":ircserv 461 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 461 " + commandTarget(client)
             + " WHO :Not enough parameters\r\n");
     else
     {
         channel = _channels.find(params[0]);
         if (channel != NULL)
         {
-            const std::vector<Client *> &members =
-                channel->members().all();
+            const std::vector<Client *> &members = channel->members().all();
 
             it = members.begin();
             while (it != members.end())
@@ -45,15 +45,18 @@ bool    Who::handle(Client &client,
                 realname = (*it)->realname();
                 if (realname.empty())
                     realname = (*it)->nickname();
-                CommandHelper::reply(client, ":ircserv 352 " + CommandHelper::target(client)
+
+                commandReply(client, ":ircserv 352 " + commandTarget(client)
                     + " " + channel->name() + " " + (*it)->username()
                     + " localhost ircserv " + (*it)->nickname()
                     + " H :0 " + realname + "\r\n");
                 ++it;
             }
         }
-        CommandHelper::reply(client, ":ircserv 315 " + CommandHelper::target(client)
+
+        commandReply(client, ":ircserv 315 " + commandTarget(client)
             + " " + params[0] + " :End of WHO list\r\n");
     }
+
     return (true);
 }

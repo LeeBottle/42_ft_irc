@@ -1,24 +1,28 @@
 #include "client/ClientManager.hpp"
 #include "client/Client.hpp"
 
-ClientManager::ClientManager()
-    : _clients()
+
+ClientManager::ClientManager() : _clients()
 {
 }
+
 
 ClientManager::~ClientManager()
 {
     clear();
 }
 
+
 Client  *ClientManager::add(int clientFd)
 {
-    Client *client;
+    Client  *client;
 
     client = new Client(clientFd);
     _clients.push_back(client);
+
     return (client);
 }
+
 
 Client  *ClientManager::findByFd(int clientFd)
 {
@@ -31,8 +35,10 @@ Client  *ClientManager::findByFd(int clientFd)
             return (*it);
         ++it;
     }
+
     return (NULL);
 }
+
 
 Client  *ClientManager::findByNickname(const std::string &nickname)
 {
@@ -45,13 +51,16 @@ Client  *ClientManager::findByNickname(const std::string &nickname)
             return (*it);
         ++it;
     }
+
     return (NULL);
 }
+
 
 const std::vector<Client *> &ClientManager::clients() const
 {
     return (_clients);
 }
+
 
 void    ClientManager::removeByFd(int clientFd)
 {
@@ -70,6 +79,7 @@ void    ClientManager::removeByFd(int clientFd)
     }
 }
 
+
 void    ClientManager::clear()
 {
     std::vector<Client *>::iterator it;
@@ -83,8 +93,9 @@ void    ClientManager::clear()
     _clients.clear();
 }
 
+
 bool    ClientManager::isNicknameInUse(const std::string &nickname,
-        Client &owner) const
+    Client &owner) const
 {
     std::vector<Client *>::const_iterator   it;
 
@@ -95,5 +106,6 @@ bool    ClientManager::isNicknameInUse(const std::string &nickname,
             return (true);
         ++it;
     }
+
     return (false);
 }

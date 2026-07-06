@@ -2,16 +2,27 @@
 
 #include <cstddef>
 
+
 ModeOperation::ModeOperation()
-    : sign('+'), mode('\0'), value(), limit(0), target(NULL)
+    : sign('+'),
+      mode('\0'),
+      value(),
+      limit(0),
+      target(NULL)
 {
 }
 
+
 ModeChange::ModeChange()
-    : changes(), params(), paramIndex(2), sign('+'), operations(),
+    : changes(),
+      params(),
+      paramIndex(2),
+      sign('+'),
+      operations(),
       currentSign('\0')
 {
 }
+
 
 void    ModeChange::addChange(char mode)
 {
@@ -20,5 +31,6 @@ void    ModeChange::addChange(char mode)
         changes += sign;
         currentSign = sign;
     }
+
     changes += mode;
 }

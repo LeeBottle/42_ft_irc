@@ -3,29 +3,34 @@
 
 #include <cstddef>
 
-MemberList::MemberList()
-    : _members()
+
+MemberList::MemberList() : _members()
 {
 }
+
 
 MemberList::~MemberList()
 {
 }
+
 
 const std::vector<Client *> &MemberList::all() const
 {
     return (_members);
 }
 
+
 size_t  MemberList::count() const
 {
     return (_members.size());
 }
 
+
 bool    MemberList::isEmpty() const
 {
     return (_members.empty());
 }
+
 
 bool    MemberList::has(Client *member) const
 {
@@ -38,15 +43,19 @@ bool    MemberList::has(Client *member) const
             return (true);
         ++it;
     }
+
     return (false);
 }
+
 
 void    MemberList::add(Client *member)
 {
     if (member == NULL || has(member))
         return ;
+
     _members.push_back(member);
 }
+
 
 void    MemberList::remove(Client *member)
 {

@@ -33,7 +33,8 @@ public:
 
     const std::string               &name() const;
     const std::vector<std::string>  &params() const;
-    Type                            type() const;
+
+    Type    type() const;
 
     bool    parse(const std::string &);
 

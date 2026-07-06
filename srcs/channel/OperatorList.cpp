@@ -2,14 +2,16 @@
 
 #include <cstddef>
 
-OperatorList::OperatorList()
-    : _operators()
+
+OperatorList::OperatorList() : _operators()
 {
 }
+
 
 OperatorList::~OperatorList()
 {
 }
+
 
 bool    OperatorList::has(Client *client) const
 {
@@ -22,16 +24,21 @@ bool    OperatorList::has(Client *client) const
             return (true);
         ++it;
     }
+
     return (false);
 }
+
 
 bool    OperatorList::add(Client *client)
 {
     if (client == NULL || has(client))
         return (false);
+
     _operators.push_back(client);
+
     return (true);
 }
+
 
 bool    OperatorList::remove(Client *client)
 {
@@ -47,5 +54,6 @@ bool    OperatorList::remove(Client *client)
         }
         ++it;
     }
+
     return (false);
 }

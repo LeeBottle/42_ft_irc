@@ -25,6 +25,7 @@ private:
     ModeChecker &operator=(const ModeChecker &);
 
     bool    user(Client &, const Parser &);
+    bool    banList(Client &, const Parser &, Channel *&);
 };
 
 #endif

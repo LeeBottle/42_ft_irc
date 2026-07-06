@@ -6,6 +6,7 @@
 #include <string>
 #include <unistd.h>
 
+
 Server::Server(int port, const std::string &password)
     : _password(password),
       _clients(),
@@ -19,9 +20,11 @@ Server::Server(int port, const std::string &password)
 {
 }
 
+
 Server::~Server()
 {
 }
+
 
 bool    Server::run()
 {
@@ -29,18 +32,25 @@ bool    Server::run()
 
     if (!_signal.setup())
         return (false);
+
     if (!_listener.setup())
         return (false);
+
     while (!_signal.shouldStop())
     {
         _poll.build(pollFds, _listener, _clients);
+
         if (!_event.wait(pollFds))
             return (false);
+
         handlePoll(pollFds);
     }
+
     std::cout << "server shutting down" << std::endl;
+
     return (true);
 }
+
 
 void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
 {
@@ -56,6 +66,7 @@ void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
         revents = pollFds[index].revents;
         if (revents == 0)
             continue ;
+
         if (fd == STDIN_FILENO)
         {
             if (revents & POLLIN)
@@ -68,6 +79,7 @@ void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
     }
 }
 
+
 void    Server::handleClient(int clientFd, short revents)
 {
     Client  *client;
@@ -79,22 +91,26 @@ void    Server::handleClient(int clientFd, short revents)
         _clientIO.remove(_clients, _channels, clientFd);
         return ;
     }
+
     if (revents & POLLIN)
     {
         if (!_clientIO.receive(_clients, _channels, clientFd))
             return ;
+
         hasReceiveData = true;
     }
+
     if (revents & POLLOUT)
         _clientIO.send(_clients, _channels, clientFd);
+
     client = _clients.findByFd(clientFd);
-    if (hasReceiveData && client != NULL
-        && !_message.process(*client))
+    if (hasReceiveData && client != NULL && !_message.process(*client))
     {
         _clientIO.send(_clients, _channels, clientFd);
         _clientIO.remove(_clients, _channels, clientFd);
     }
 }
+
 
 void    Server::handleTerminal()
 {
@@ -102,9 +118,11 @@ void    Server::handleTerminal()
 
     if (!std::getline(std::cin, line))
         return ;
+
     if (line == "DIE")
         _signal.requestStop();
 }
+
 
 bool    Server::acceptClients()
 {
@@ -114,8 +132,10 @@ bool    Server::acceptClients()
     {
         if (!_listener.acceptClient(clientFd))
             return (false);
+
         if (clientFd == -1)
             return (true);
+
         _clients.add(clientFd);
         std::cout << "client connected with fd " << clientFd << std::endl;
     }

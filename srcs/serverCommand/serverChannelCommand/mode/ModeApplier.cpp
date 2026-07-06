@@ -1,18 +1,20 @@
 #include "serverCommand/serverChannelCommand/mode/ModeApplier.hpp"
 #include "channel/Channel.hpp"
 
+
 ModeApplier::ModeApplier()
 {
 }
+
 
 ModeApplier::~ModeApplier()
 {
 }
 
-void    ModeApplier::apply(Channel &channel,
-    const ModeChange &change)
+
+void    ModeApplier::apply(Channel &channel, const ModeChange &change)
 {
-    std::vector<ModeOperation>::const_iterator it;
+    std::vector<ModeOperation>::const_iterator  it;
 
     it = change.operations.begin();
     while (it != change.operations.end())

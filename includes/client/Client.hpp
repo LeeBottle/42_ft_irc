@@ -15,10 +15,9 @@ public:
     const std::string   &nickname() const;
     const std::string   &username() const;
     const std::string   &realname() const;
-    ReceiveBuffer &receiveBuffer();
-    SendBuffer    &sendBuffer();
-
-    std::string prefix() const;
+    ReceiveBuffer       &receiveBuffer();
+    SendBuffer          &sendBuffer();
+    std::string         prefix() const;
     
     int     fd() const;
     bool    hasPassword() const;

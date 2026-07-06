@@ -32,8 +32,7 @@ private:
     Join(const Join &);
     Join &operator=(const Join &);
 
-    JoinResult  checkPermission(Channel &, Client &,
-                    const std::string &) const;
+    JoinResult  checkPermission(Channel &, Client &, const std::string &) const;
     void        join(Channel &, Client &) const;
 };
 

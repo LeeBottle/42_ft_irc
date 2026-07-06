@@ -6,40 +6,42 @@
 
 #include <vector>
 
-Names::Names(ClientManager &clients,
-    ChannelManager &channels)
+
+Names::Names(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {
     (void)clients;
 }
 
+
 Names::~Names()
 {
 }
 
-bool    Names::handle(Client &client,
-    const Parser &message)
+
+bool    Names::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
     Channel                         *channel;
 
     if (!client.isRegistered())
-        CommandHelper::reply(client, ":ircserv 451 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 451 " + commandTarget(client)
             + " :You have not registered\r\n");
     else if (params.empty())
-        CommandHelper::reply(client, ":ircserv 461 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 461 " + commandTarget(client)
             + " NAMES :Not enough parameters\r\n");
-    else if (!CommandHelper::validChannel(params[0]))
-        CommandHelper::reply(client, ":ircserv 403 " + CommandHelper::target(client)
+    else if (!commandValidChannel(params[0]))
+        commandReply(client, ":ircserv 403 " + commandTarget(client)
             + " " + params[0] + " :No such channel\r\n");
     else
     {
         channel = _channels.find(params[0]);
         if (channel == NULL)
-            CommandHelper::reply(client, ":ircserv 403 " + CommandHelper::target(client)
+            commandReply(client, ":ircserv 403 " + commandTarget(client)
                 + " " + params[0] + " :No such channel\r\n");
         else
-            CommandHelper::namesReply(client, *channel);
+            commandNamesReply(client, *channel);
     }
+
     return (true);
 }

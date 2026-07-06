@@ -16,8 +16,7 @@ public:
     ModeParser(ClientManager &, ChannelManager &);
     ~ModeParser();
 
-    bool    collect(Client &, Channel &, const Parser &,
-                ModeChange &);
+    bool    collect(Client &, Channel &, const Parser &, ModeChange &);
 
 private:
     ClientManager   &_clients;
@@ -27,9 +26,8 @@ private:
     ModeParser &operator=(const ModeParser &);
 
     bool    collectLetter(Client &, Channel &,
-                const std::vector<std::string> &, ModeChange &,
-                char);
-    bool    collectKey(Client &, Channel &,
+                const std::vector<std::string> &, ModeChange &, char);
+    bool    collectKey(Client &, Channel &, 
                 const std::vector<std::string> &, ModeChange &);
     bool    collectLimit(Client &, Channel &,
                 const std::vector<std::string> &, ModeChange &);

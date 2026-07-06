@@ -6,19 +6,21 @@
 
 #include <vector>
 
-ModeParser::ModeParser(ClientManager &clients,
-    ChannelManager &channels)
+
+ModeParser::ModeParser(ClientManager &clients, ChannelManager &channels)
     : _clients(clients)
 {
     (void)channels;
 }
 
+
 ModeParser::~ModeParser()
 {
 }
 
-bool    ModeParser::collect(Client &client,
-    Channel &channel, const Parser &message, ModeChange &change)
+
+bool    ModeParser::collect(Client &client, Channel &channel,
+    const Parser &message, ModeChange &change)
 {
     const std::vector<std::string>  &params = message.params();
     const std::string               &modeString = params[1];
@@ -34,12 +36,13 @@ bool    ModeParser::collect(Client &client,
             return (false);
         ++index;
     }
+
     return (true);
 }
 
-bool    ModeParser::collectLetter(Client &client,
-    Channel &channel, const std::vector<std::string> &params,
-    ModeChange &change, char mode)
+
+bool    ModeParser::collectLetter(Client &client, Channel &channel,
+    const std::vector<std::string> &params, ModeChange &change, char mode)
 {
     ModeOperation  operation;
 
@@ -60,16 +63,18 @@ bool    ModeParser::collectLetter(Client &client,
         sendBanEnd(client, channel);
     else
     {
-        CommandHelper::reply(client, ":ircserv 472 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 472 " + commandTarget(client)
             + " " + mode + " :is unknown mode char to me\r\n");
+
         return (false);
     }
+
     return (true);
 }
 
-bool    ModeParser::collectKey(Client &client,
-    Channel &channel, const std::vector<std::string> &params,
-    ModeChange &change)
+
+bool    ModeParser::collectKey(Client &client, Channel &channel,
+    const std::vector<std::string> &params, ModeChange &change)
 {
     ModeOperation  operation;
 
@@ -84,22 +89,27 @@ bool    ModeParser::collectKey(Client &client,
         }
         return (true);
     }
-    if (change.paramIndex >= params.size() || params[change.paramIndex].empty())
+
+    if (change.paramIndex >= params.size() 
+        || params[change.paramIndex].empty())
     {
-        CommandHelper::reply(client, ":ircserv 461 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 461 " + commandTarget(client)
             + " MODE :Not enough parameters\r\n");
+
         return (false);
     }
+
     operation.value = params[change.paramIndex];
     change.operations.push_back(operation);
     change.addChange('k');
     change.params += " " + params[change.paramIndex++];
+
     return (true);
 }
 
-bool    ModeParser::collectLimit(Client &client,
-    Channel &channel, const std::vector<std::string> &params,
-    ModeChange &change)
+
+bool    ModeParser::collectLimit(Client &client, Channel &channel,
+    const std::vector<std::string> &params, ModeChange &change)
 {
     ModeOperation  operation;
 
@@ -114,42 +124,50 @@ bool    ModeParser::collectLimit(Client &client,
         }
         return (true);
     }
+
     if (change.paramIndex >= params.size()
         || !parseLimit(params[change.paramIndex], operation.limit))
     {
-        CommandHelper::reply(client, ":ircserv 461 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 461 " + commandTarget(client)
             + " MODE :Not enough parameters\r\n");
+
         return (false);
     }
+
     change.operations.push_back(operation);
     change.addChange('l');
     change.params += " " + params[change.paramIndex++];
+
     return (true);
 }
 
-bool    ModeParser::collectOperator(Client &client,
-    Channel &channel, const std::vector<std::string> &params,
-    ModeChange &change)
+
+bool    ModeParser::collectOperator(Client &client, Channel &channel,
+    const std::vector<std::string> &params, ModeChange &change)
 {
     ModeOperation  operation;
 
     if (change.paramIndex >= params.size())
     {
-        CommandHelper::reply(client, ":ircserv 461 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 461 " + commandTarget(client)
             + " MODE :Not enough parameters\r\n");
+
         return (false);
     }
+
     operation.sign = change.sign;
     operation.mode = 'o';
     operation.target = _clients.findByNickname(params[change.paramIndex]);
-    if (operation.target == NULL
-        || !channel.members().has(operation.target))
+
+    if (operation.target == NULL || !channel.members().has(operation.target))
     {
-        CommandHelper::reply(client, ":ircserv 441 " + CommandHelper::target(client)
+        commandReply(client, ":ircserv 441 " + commandTarget(client)
             + " " + params[change.paramIndex] + " " + channel.name()
             + " :They aren't on that channel\r\n");
+
         return (false);
     }
+
     if ((change.sign == '+' && !channel.operators().has(operation.target))
         || (change.sign == '-' && channel.operators().has(operation.target)))
     {
@@ -157,32 +175,37 @@ bool    ModeParser::collectOperator(Client &client,
         change.addChange('o');
         change.params += " " + operation.target->nickname();
     }
+
     ++change.paramIndex;
+
     return (true);
 }
 
-void    ModeParser::sendBanEnd(Client &client,
-    Channel &channel)
+
+void    ModeParser::sendBanEnd(Client &client, Channel &channel)
 {
-    CommandHelper::reply(client, ":ircserv 368 " + CommandHelper::target(client)
+    commandReply(client, ":ircserv 368 " + commandTarget(client)
         + " " + channel.name() + " :End of Channel Ban List\r\n");
 }
 
-bool    ModeParser::parseLimit(const std::string &value,
-    size_t &limit) const
+
+bool    ModeParser::parseLimit(const std::string &value, size_t &limit) const
 {
     size_t index;
 
     if (value.empty())
         return (false);
+
     limit = 0;
     index = 0;
     while (index < value.size())
     {
         if (value[index] < '0' || value[index] > '9')
             return (false);
+
         limit = limit * 10 + static_cast<size_t>(value[index] - '0');
         ++index;
     }
+
     return (limit > 0);
 }

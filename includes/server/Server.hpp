@@ -23,15 +23,15 @@ public:
     bool    run();
 
 private:
-    std::string             _password;
-    ClientManager           _clients;
-    ChannelManager          _channels;
-    Listener                _listener;
-    Poll                    _poll;
-    ClientIO                _clientIO;
-    Message                 _message;
-    Event                   _event;
-    Signal                  _signal;
+    std::string     _password;
+    ClientManager   _clients;
+    ChannelManager  _channels;
+    Listener        _listener;
+    Poll            _poll;
+    ClientIO        _clientIO;
+    Message         _message;
+    Event           _event;
+    Signal          _signal;
 
     Server();
     Server(const Server &);
@@ -41,7 +41,6 @@ private:
     void    handleClient(int, short);
     void    handlePoll(std::vector<struct pollfd> &);
     void    handleTerminal();
-
 };
 
 #endif

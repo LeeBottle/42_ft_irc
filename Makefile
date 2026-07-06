@@ -2,6 +2,10 @@ NAME = ircserv
 
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+
+ifeq ($(DEBUG_RECV),1)
+	CXXFLAGS += -DDEBUG_RECV
+endif
 INCLUDES = -I includes
 DEPFLAGS = -MMD -MP
 

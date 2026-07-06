@@ -31,8 +31,8 @@ private:
     ClientCommand(const ClientCommand &);
     ClientCommand &operator=(const ClientCommand &);
 
-    void                reply(Client &, const std::string &) const;
     const std::string   &target(Client &) const;
+    void                reply(Client &, const std::string &) const;
     void                sendRegistrationIfReady(Client &, bool);
 };
 

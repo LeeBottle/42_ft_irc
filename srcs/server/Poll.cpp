@@ -5,16 +5,19 @@
 
 #include <unistd.h>
 
+
 Poll::Poll()
 {
 }
+
 
 Poll::~Poll()
 {
 }
 
-void    Poll::build(std::vector<struct pollfd> &pollFds,
-    Listener &listener, ClientManager &clients) const
+
+void    Poll::build(std::vector<struct pollfd> &pollFds, Listener &listener,
+    ClientManager &clients) const
 {
     pollFds.clear();
     appendTerminal(pollFds);
@@ -22,21 +25,23 @@ void    Poll::build(std::vector<struct pollfd> &pollFds,
     appendClients(pollFds, clients);
 }
 
-void    Poll::appendTerminal(
-    std::vector<struct pollfd> &pollFds) const
+
+void    Poll::appendTerminal(std::vector<struct pollfd> &pollFds) const
 {
     struct pollfd pollFd;
 
     if (!isatty(STDIN_FILENO))
         return ;
+
     pollFd.fd = STDIN_FILENO;
     pollFd.events = POLLIN;
     pollFd.revents = 0;
     pollFds.push_back(pollFd);
 }
 
-void    Poll::appendListener(
-    std::vector<struct pollfd> &pollFds, Listener &listener) const
+
+void    Poll::appendListener(std::vector<struct pollfd> &pollFds,
+    Listener &listener) const
 {
     struct pollfd pollFd;
 
@@ -46,12 +51,11 @@ void    Poll::appendListener(
     pollFds.push_back(pollFd);
 }
 
-void    Poll::appendClients(
-    std::vector<struct pollfd> &pollFds, ClientManager &clientManager) const
+void    Poll::appendClients(std::vector<struct pollfd> &pollFds,
+    ClientManager &clientManager) const
 {
     std::vector<Client *>::const_iterator   it;
-    const std::vector<Client *>             &clients =
-        clientManager.clients();
+    const std::vector<Client *>             &clients = clientManager.clients();
     struct pollfd                           pollFd;
 
     it = clients.begin();
@@ -59,8 +63,10 @@ void    Poll::appendClients(
     {
         pollFd.fd = (*it)->fd();
         pollFd.events = POLLIN;
+
         if ((*it)->sendBuffer().hasData())
             pollFd.events |= POLLOUT;
+
         pollFd.revents = 0;
         pollFds.push_back(pollFd);
         ++it;

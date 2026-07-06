@@ -20,14 +20,16 @@ struct ModeOperation
 
 struct ModeChange
 {
-    std::string                             changes;
-    std::string                             params;
-    size_t                                  paramIndex;
-    char                                    sign;
-    std::vector<ModeOperation> operations;
-    char                                    currentSign;
+    std::string changes;
+    std::string params;
+    size_t      paramIndex;
+    char        sign;
+    char        currentSign;
+
+    std::vector<ModeOperation>  operations;
 
     ModeChange();
+
     void    addChange(char);
 };
 

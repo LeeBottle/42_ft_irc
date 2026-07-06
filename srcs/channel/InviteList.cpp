@@ -2,14 +2,16 @@
 
 #include <cstddef>
 
-InviteList::InviteList()
-    : _invites()
+
+InviteList::InviteList() : _invites()
 {
 }
+
 
 InviteList::~InviteList()
 {
 }
+
 
 bool    InviteList::has(Client *client) const
 {
@@ -22,14 +24,17 @@ bool    InviteList::has(Client *client) const
             return (true);
         ++it;
     }
+
     return (false);
 }
+
 
 void    InviteList::add(Client *client)
 {
     if (client != NULL && !has(client))
         _invites.push_back(client);
 }
+
 
 void    InviteList::remove(Client *client)
 {
