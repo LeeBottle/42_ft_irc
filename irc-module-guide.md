@@ -4,6 +4,75 @@
 
 제출용 README가 아니라, 평가 준비와 코드 설명을 위한 내부 정리 문서다.
 
+이번 버전에서는 `EAGAIN/EWOULDBLOCK`, `ReceiveBuffer::pop(line)`의 정확한 주체, 현재 코드의 server numeric reply를 추가로 정리했다.
+
+
+## 목차
+
+- [근거 자료](#근거-자료)
+  - [IRC protocol references](#irc-protocol-references)
+  - [Linux / POSIX system call references](#linux--posix-system-call-references)
+- [전체 디렉토리 구조](#전체-디렉토리-구조)
+- [전체 모듈 구조](#전체-모듈-구조)
+- [모듈 책임 요약](#모듈-책임-요약)
+- [전체 실행 흐름](#전체-실행-흐름)
+- [`main` 모듈](#main-모듈)
+- [`server` 모듈](#server-모듈)
+  - [`Server`](#server)
+  - [`Listener`](#listener)
+  - [`Poll`](#poll)
+  - [`ClientIO`](#clientio)
+  - [`Signal`](#signal)
+- [`event` 모듈](#event-모듈)
+- [`client` 모듈](#client-모듈)
+  - [`Client`](#client)
+  - [`Client::prefix()`](#clientprefix)
+  - [`ClientManager`](#clientmanager)
+  - [`ReceiveBuffer`](#receivebuffer)
+  - [`SendBuffer`](#sendbuffer)
+- [`parser` 모듈](#parser-모듈)
+- [`serverMessage` 모듈](#servermessage-모듈)
+- [`serverCommand` 모듈](#servercommand-모듈)
+  - [`Command`](#command)
+  - [`PRIVMSG` 분기](#privmsg-분기)
+  - [`ClientCommand`](#clientcommand)
+  - [channel command](#channel-command)
+  - [`CommandHelper`](#commandhelper)
+- [channel command 상세](#channel-command-상세)
+  - [`JOIN`](#join)
+  - [`PART`](#part)
+  - [`PRIVMSG #channel`](#privmsg-channel)
+  - [`NAMES`](#names)
+  - [`WHO`](#who)
+  - [`TOPIC`](#topic)
+  - [`INVITE`](#invite)
+  - [`KICK`](#kick)
+- [`MODE` 모듈](#mode-모듈)
+  - [전체 처리 흐름](#전체-처리-흐름)
+  - [지원 mode](#지원-mode)
+  - [`ModeChecker`](#modechecker)
+  - [`ModeParser`](#modeparser)
+  - [`ModeChange`](#modechange)
+  - [`ModeApplier`](#modeapplier)
+  - [`ModeState` 기본값](#modestate-기본값)
+- [`channel` 모듈](#channel-모듈)
+  - [`Channel`](#channel)
+  - [`ChannelManager`](#channelmanager)
+  - [`MemberList`](#memberlist)
+  - [`OperatorList`](#operatorlist)
+  - [`InviteList`](#invitelist)
+  - [`ModeState`](#modestate)
+- [서버 응답 코드 정리](#서버-응답-코드-정리)
+  - [등록 / client command 응답](#등록--client-command-응답)
+  - [PRIVMSG 응답](#privmsg-응답)
+  - [channel command 응답](#channel-command-응답)
+  - [TOPIC / WHO 응답](#topic--who-응답)
+  - [MODE 응답](#mode-응답)
+  - [내부 bool 반환값](#내부-bool-반환값)
+- [모듈 경계 요약](#모듈-경계-요약)
+- [테스트 가이드](#테스트-가이드)
+- [현재 구현 범위와 의도적으로 안 한 것](#현재-구현-범위와-의도적으로-안-한-것)
+
 ---
 
 ## 근거 자료
@@ -111,7 +180,7 @@
   ├── ClientManager
   │   └── client 생성, 검색, 삭제
   ├── ReceiveBuffer
-  │   └── recv()로 받은 bytes 저장, CR-LF 기준 line 추출
+  │   └── recv()로 받은 bytes 저장, pop(line) 기능 제공
   └── SendBuffer
       └── send()로 보낼 bytes 저장
 
@@ -121,7 +190,7 @@
 
 [serverMessage]
   └── Message
-      └── ReceiveBuffer에서 line을 꺼내 Parser와 Command로 연결
+      └── ReceiveBuffer::pop(line)을 호출해 Parser와 Command로 연결
 
 [serverCommand]
   ├── Command
@@ -175,7 +244,7 @@
 | `event` | `poll()` 호출과 system error 처리 | poll 대상 구성, client 처리 |
 | `client` | client 상태와 receive/send buffer 저장 | 실제 `recv()`/`send()` 호출 |
 | `parser` | IRC line을 command type과 params로 변환 | command 실행, 권한 검사 |
-| `serverMessage` | receive buffer에서 line을 꺼내 command 실행으로 연결 | parsing 세부 규칙, command 세부 로직 |
+| `serverMessage` | `ReceiveBuffer::pop(line)`을 반복 호출해 command 실행으로 연결 | raw bytes 저장, parsing 세부 규칙, command 세부 로직 |
 | `serverCommand` | IRC command 실행 | raw socket I/O, poll 처리 |
 | `channel` | channel 상태 저장과 변경 | numeric reply 생성, socket I/O |
 
@@ -476,8 +545,45 @@ client socket fd
 | `> 0` | bytes 읽음 | receive buffer에 저장하고 계속 읽기 |
 | `0` | 상대가 연결 종료 | client 제거 |
 | `-1`, `EINTR` | signal 때문에 중단 | 다시 시도 |
-| `-1`, `EAGAIN/EWOULDBLOCK` | 지금 더 읽을 데이터 없음 | 정상 종료 |
+| `-1`, `EAGAIN/EWOULDBLOCK` | non-blocking fd에서 지금 당장 더 읽을 데이터가 없음 | 정상 종료 |
 | 그 외 | socket error | client 제거 |
+
+### `EAGAIN` / `EWOULDBLOCK`
+
+`EAGAIN`과 `EWOULDBLOCK`은 non-blocking socket에서 자주 나오는 `errno` 값이다.
+
+blocking socket이라면 읽을 데이터가 없을 때 `recv()`가 멈춰서 기다릴 수 있다.
+하지만 ft_irc 과제에서는 모든 I/O가 non-blocking이어야 하므로, socket fd를 `O_NONBLOCK`으로 설정한다.
+
+non-blocking fd에서는 읽을 데이터가 없을 때 기다리지 않고 바로 실패처럼 돌아온다.
+이때 `recv()`는 `-1`을 반환하고, `errno`가 `EAGAIN` 또는 `EWOULDBLOCK`으로 설정된다.
+
+이 값은 치명적인 error가 아니다.
+현재 시점에 kernel socket receive buffer가 비었다는 뜻이다.
+
+```text
+recv() > 0
+ -> bytes를 읽음
+ -> ReceiveBuffer에 append
+ -> 더 읽을 수 있는지 다시 recv()
+
+recv() == -1 && errno == EAGAIN/EWOULDBLOCK
+ -> 지금은 더 읽을 bytes 없음
+ -> 정상적으로 receive loop 종료
+ -> Message::process()로 넘어가서 지금까지 쌓인 line 처리
+```
+
+`send()`에서도 같은 의미로 사용된다.
+non-blocking fd에서 kernel socket send buffer가 지금 당장 더 받을 수 없으면 `send()`가 `-1`을 반환하고 `errno`가 `EAGAIN` 또는 `EWOULDBLOCK`이 될 수 있다.
+이 경우 현재 서버는 연결을 끊지 않고, 다음 `POLLOUT` event 때 남은 `SendBuffer`를 다시 전송한다.
+
+정리하면 아래와 같다.
+
+| 상황 | 의미 | 현재 코드 처리 |
+|---|---|---|
+| `recv()`에서 `EAGAIN/EWOULDBLOCK` | 지금 더 읽을 데이터 없음 | 정상 종료, 연결 유지 |
+| `send()`에서 `EAGAIN/EWOULDBLOCK` | 지금 더 보낼 수 없음 | 전송 중단, 남은 데이터 유지 |
+| 일반 socket error | 실제 오류 | client 제거 |
 
 ### send 흐름
 
@@ -820,9 +926,9 @@ PRIVMSG bob :hello bob
 여기에는 끝의 `\r\n`은 포함되지 않는다.
 `ReceiveBuffer::pop()` 단계에서 line 단위로 잘렸기 때문이다.
 
-## Parser가 만드는 value
+## Parser가 만드는 값
 
-| value | meaning |
+| 값 | 의미 |
 |---|---|
 | `_name` | 대문자로 정규화된 command 이름 |
 | `_params` | command parameter 목록 |
@@ -928,26 +1034,34 @@ Parser는 오직 “문자열 한 줄을 구조화된 command 정보로 바꾸�
 
 `serverMessage` 모듈은 receive buffer와 command 실행 사이를 연결한다.
 
-`ClientIO::receive()`가 socket에서 bytes를 읽어 `ReceiveBuffer`에 쌓아두면,
-`Message::process()`가 그 buffer에서 IRC line을 하나씩 꺼내 처리한다.
+중요한 점은 `ReceiveBuffer`가 스스로 message를 처리하는 객체가 아니라는 것이다.
+`ReceiveBuffer`는 raw bytes를 저장하고, `pop(line)`이라는 함수를 제공한다.
+실제로 `pop(line)`을 반복 호출해서 line을 꺼내고 다음 단계로 넘기는 주체는 `Message::process()`다.
 
 ```text
-Client::ReceiveBuffer
- -> Message::process()
- -> ReceiveBuffer::pop()
- -> Parser::parse()
- -> Command::execute()
+ClientIO::receive()
+ -> recv()로 bytes 읽기
+ -> Client::ReceiveBuffer::append()
+
+Message::process()
+ -> Client::ReceiveBuffer::pop(line)을 반복 호출
+ -> line이 있으면 Parser / Command 흐름으로 전달
 ```
+
+---
 
 ## 파일
 
 | 파일 | 역할 |
 |---|---|
-| `Message.hpp/cpp` | receive buffer line을 parser와 command 실행 흐름으로 연결 |
+| `Message.hpp/cpp` | receive buffer에 저장된 bytes에서 완성된 IRC line을 꺼내 parser와 command 실행 흐름으로 연결 |
+
+---
 
 ## 왜 Message 모듈이 필요한가?
 
-TCP는 한 번의 `recv()`로 command 하나가 정확히 들어온다는 보장이 없다.
+TCP는 message 단위가 아니라 byte stream이다.
+즉, client가 command를 한 줄씩 보냈다고 해서 server가 한 번의 `recv()`로 command 하나씩 받는 것이 아니다.
 
 예를 들어 client가 아래처럼 보냈어도:
 
@@ -955,7 +1069,7 @@ TCP는 한 번의 `recv()`로 command 하나가 정확히 들어온다는 보장
 PASS pass\r\nNICK alice\r\nUSER alice 0 * :Alice\r\n
 ```
 
-server는 이렇게 받을 수 있다.
+server는 이렇게 쪼개서 받을 수 있다.
 
 ```text
 recv #1: "PASS pa"
@@ -963,38 +1077,118 @@ recv #2: "ss\r\nNICK alice\r\nUSER"
 recv #3: " alice 0 * :Alice\r\n"
 ```
 
-그래서 처리 순서가 필요하다.
+또 반대로, 한 번의 `recv()` 결과 안에 여러 command가 한꺼번에 들어올 수도 있다.
+
+그래서 흐름을 둘로 나눈다.
 
 ```text
-1. recv()는 bytes만 저장
-2. ReceiveBuffer가 \r\n 기준으로 line을 꺼냄
-3. Message가 line마다 Parser를 호출
-4. Parser 결과를 Command에 넘김
+ClientIO / ReceiveBuffer
+ -> bytes 저장 담당
+
+Message / Parser / Command
+ -> 완성된 IRC line 처리 담당
 ```
 
-## 처리 흐름
+---
+
+## 정확한 처리 흐름
 
 ```text
+ClientIO::receive(clientFd)
+ -> recv()로 bytes를 읽음
+ -> Client::ReceiveBuffer::append()
+
+Server::handleClient()
+ -> Message::process(client)
+
 Message::process(client)
- -> while ReceiveBuffer::pop(line)
+ -> while client.receiveBuffer().pop(line)
     -> Message::handle(client, line)
        -> Parser::parse(line)
        -> Command::execute(client, parser)
 ```
 
-한 번의 `recv()` 안에 여러 command가 들어와도 `while`로 모두 처리할 수 있다.
+`ReceiveBuffer::pop(line)`의 역할은 아래와 같다.
+
+```text
+내부 buffer에서 "\r\n" 검색
+ -> 없으면 false 반환
+ -> 있으면 "\r\n" 앞까지 line으로 복사
+ -> 꺼낸 line과 "\r\n"을 내부 buffer에서 제거
+ -> true 반환
+```
+
+즉, `pop(line)`의 구현은 `ReceiveBuffer` 안에 있지만, 이 함수를 호출해서 처리 흐름을 진행하는 객체는 `Message::process()`다.
+
+---
+
+## 여러 command가 한 번에 들어온 경우
+
+한 번의 `ClientIO::receive()` 호출 안에서는 `recv()`가 여러 번 실행될 수 있다.
+`recv()`는 읽을 수 있는 bytes가 있으면 계속 읽고, 더 읽을 데이터가 없어서 `EAGAIN/EWOULDBLOCK`이 나오면 멈춘다.
+
+그 결과 `ReceiveBuffer` 안에 여러 IRC line이 쌓일 수 있다.
+`Message::process()`는 `pop(line)`을 while loop로 반복 호출해서 완성된 line을 모두 처리한다.
+
+예:
 
 ```text
 PASS pass\r\nNICK alice\r\nUSER alice 0 * :Alice\r\n
 ```
 
-위처럼 들어오면 line은 세 번 꺼내진다.
+위 데이터가 buffer에 들어 있으면 `pop(line)`은 순서대로 아래 세 line을 반환한다.
 
 ```text
 PASS pass
 NICK alice
 USER alice 0 * :Alice
 ```
+
+처리 흐름은 아래처럼 세 번 반복된다.
+
+```text
+1번째 line: PASS pass
+ -> Parser::parse()
+ -> Command::execute()
+ -> ClientCommand::pass()
+
+2번째 line: NICK alice
+ -> Parser::parse()
+ -> Command::execute()
+ -> ClientCommand::nick()
+
+3번째 line: USER alice 0 * :Alice
+ -> Parser::parse()
+ -> Command::execute()
+ -> ClientCommand::user()
+```
+
+---
+
+## line 길이와 buffer 크기
+
+현재 `ClientIO::receive()`의 임시 read buffer는 아래처럼 512 bytes다.
+
+```text
+char buffer[512]
+```
+
+하지만 이것은 한 번의 `recv()` system call에서 user space로 복사할 수 있는 임시 크기일 뿐이다.
+`ReceiveBuffer`에 누적되는 전체 크기와 `pop(line)`이 한 번에 반환하는 line 길이에는 별도 제한을 두지 않았다.
+
+정리하면 아래와 같다.
+
+| 구분 | 현재 코드 기준 |
+|---|---|
+| 한 번의 `recv()` 임시 buffer | 512 bytes |
+| `ReceiveBuffer` 전체 누적 크기 | 별도 제한 없음 |
+| `pop(line)`이 반환하는 line 길이 | `\r\n` 전까지 전부, 별도 제한 없음 |
+| IRC RFC의 일반 message 길이 제한 | CR-LF 포함 512 bytes 기준이지만 현재 코드에서 별도 검사하지 않음 |
+
+따라서 `\r\n`이 오지 않으면 bytes는 `ReceiveBuffer`에 계속 누적된다.
+일반적인 ft_irc 평가와 irssi/nc 테스트에서는 문제가 되지 않지만, 엄밀한 IRC message length 제한까지 검사하는 구현은 아니다.
+
+---
 
 ## command 실행 결과
 
@@ -1009,21 +1203,30 @@ USER alice 0 * :Alice
 
 ```text
 QUIT
- -> Command::execute() false
- -> Message::process() false
- -> Server가 남은 send buffer 전송
+ -> ClientCommand::quit()
+ -> ERROR :Closing Link를 SendBuffer에 저장
+ -> false 반환
+ -> Message::process() false 반환
+ -> Server가 남은 SendBuffer를 한 번 전송
  -> client 제거
 ```
 
+parameter 오류, 권한 오류, unknown command 같은 경우에는 numeric reply를 보내고 보통 `true`를 반환한다.
+즉, 에러 응답을 보냈다고 해서 연결을 바로 끊지는 않는다.
+
+---
+
 ## 빈 line 처리
 
-빈 line이나 의미 없는 line은 command 실행으로 이어지지 않는다.
+빈 line이나 parsing할 수 없는 line은 command 실행으로 이어지지 않는다.
 
 ```text
 \r\n
 ```
 
-이런 입력은 Parser 단계에서 유효한 command가 없으므로 무시된다.
+이런 입력이 들어오면 `Parser::parse()`가 실패하고, `Message::handle()`은 연결을 유지한 채 true를 반환한다.
+
+---
 
 ## 이 모듈이 하지 않는 일
 
@@ -1032,12 +1235,14 @@ QUIT
 ```text
 socket recv
 socket send
+raw bytes 저장 자체
 command 의미 판단
 channel 상태 변경
 client 목록 관리
 ```
 
-`Message`는 이름 그대로 “받은 message line을 parser와 command 흐름으로 넘기는 연결 계층”이다.
+`Message`는 받은 bytes를 직접 저장하는 객체가 아니다.
+`ReceiveBuffer`에 이미 저장된 data를 `pop(line)`으로 꺼내서 Parser와 Command 흐름으로 넘기는 연결 계층이다.
 
 ---
 
@@ -2391,6 +2596,140 @@ poll event 처리
 
 channel 모듈은 channel의 실제 상태를 저장하고 변경하는 역할에 집중한다.
 응답 생성과 command 흐름 제어는 `serverCommand` 쪽에서 담당한다.
+
+---
+
+# 서버 응답 코드 정리
+
+이 섹션은 현재 코드에서 실제로 사용하는 server reply와 numeric reply를 정리한 것이다.
+평가 중에는 “이 에러가 왜 나왔는지”를 설명해야 할 수 있으므로, 코드에 들어간 응답은 최소한 한 번씩 확인해두는 것이 좋다.
+
+---
+
+## 등록 / client command 응답
+
+| 코드 / 응답 | 사용 command | 발생 상황 | 현재 응답 의미 |
+|---|---|---|---|
+| `001` | `PASS` / `NICK` / `USER` | PASS 성공, NICK 설정, USER 설정이 모두 끝나서 등록 완료 | Welcome to ircserv |
+| `221` | 등록 완료, `MODE <myNick>` | 현재 user mode 조회 결과 | `+i` 응답 |
+| `409` | `PING` | PING parameter 없음 | No origin specified |
+| `421` | unknown command | Parser가 모르는 command | Unknown command |
+| `431` | `NICK` | nickname parameter 없음 | No nickname given |
+| `433` | `NICK` | 이미 다른 client가 같은 nickname 사용 중 | Nickname is already in use |
+| `461` | `PASS`, `USER` 등 | 필수 parameter 부족 | Not enough parameters |
+| `462` | `PASS`, `USER` | 이미 registered 상태에서 다시 등록하려 함 | You may not reregister |
+| `464` | `PASS` | password 불일치 | Password incorrect |
+| `CAP * LS` | `CAP LS` | irssi capability 목록 요청 | 지원 capability 없음, 빈 목록 응답 |
+| `PONG` | `PING token` | client PING에 대한 응답 | `PONG ircserv :token` |
+| `ERROR` | `QUIT` | client가 연결 종료 요청 | Closing Link 후 연결 종료 |
+
+---
+
+## PRIVMSG 응답
+
+`PRIVMSG`는 target이 nickname이면 `ClientCommand::privmsg()`가 처리하고, target이 channel이면 channel command `Privmsg::handle()`이 처리한다.
+
+| 코드 | 사용 command | 발생 상황 | 현재 응답 의미 |
+|---|---|---|---|
+| `451` | `PRIVMSG nick`, `PRIVMSG #channel` | 미등록 client가 메시지를 보내려 함 | You have not registered |
+| `411` | `PRIVMSG` | recipient parameter 없음 | No recipient given |
+| `412` | `PRIVMSG` | text parameter 없음 | No text to send |
+| `401` | `PRIVMSG nick` | target nickname을 찾지 못함 | No such nick/channel |
+| `403` | `PRIVMSG #channel` | target channel 없음 | No such channel |
+| `404` | `PRIVMSG #channel` | sender가 channel member가 아님 | Cannot send to channel |
+
+정상 개인 메시지:
+
+```text
+:sender!user@localhost PRIVMSG targetNick :text
+```
+
+정상 channel 메시지:
+
+```text
+:sender!user@localhost PRIVMSG #channel :text
+```
+
+현재 sender에게는 echo하지 않고, target client 또는 sender를 제외한 channel member에게만 보낸다.
+
+---
+
+## channel command 응답
+
+| 코드 | 사용 command | 발생 상황 | 현재 응답 의미 |
+|---|---|---|---|
+| `341` | `INVITE` | invite 성공 | inviter에게 invite 성공 알림 |
+| `353` | `JOIN`, `NAMES` | channel member 목록 응답 | NAMES list |
+| `366` | `JOIN`, `NAMES` | NAMES 응답 종료 | End of /NAMES list |
+| `401` | `INVITE` | 초대할 target nick 없음 | No such nick/channel |
+| `403` | `JOIN`, `PART`, `NAMES`, `PRIVMSG #channel`, `TOPIC`, `INVITE`, `KICK`, `MODE` | channel 이름이 잘못됐거나 channel이 없음 | No such channel |
+| `441` | `KICK`, `MODE +o/-o` | target client가 해당 channel member가 아님 | They aren't on that channel |
+| `442` | `PART`, `TOPIC`, `INVITE`, `KICK`, `MODE` | sender가 해당 channel member가 아님 | You're not on that channel |
+| `443` | `INVITE` | target client가 이미 channel member임 | is already on channel |
+| `451` | 대부분의 channel command | 미등록 client가 channel command 사용 | You have not registered |
+| `461` | `JOIN`, `PART`, `NAMES`, `WHO`, `TOPIC`, `INVITE`, `KICK`, `MODE` | 필수 parameter 부족 | Not enough parameters |
+| `471` | `JOIN` | channel limit 초과 | Cannot join channel (+l) |
+| `473` | `JOIN` | invite-only channel인데 invite 없음 | Cannot join channel (+i) |
+| `475` | `JOIN` | channel key 불일치 | Cannot join channel (+k) |
+| `482` | `TOPIC`, `INVITE`, `KICK`, `MODE` | operator 권한 없음 | You're not channel operator |
+
+---
+
+## TOPIC / WHO 응답
+
+| 코드 | 사용 command | 발생 상황 | 현재 응답 의미 |
+|---|---|---|---|
+| `331` | `TOPIC #channel` | topic 없음 | No topic is set |
+| `332` | `TOPIC #channel` | topic 있음 | 현재 topic 반환 |
+| `352` | `WHO #channel` | channel member 한 명마다 전송 | WHO reply |
+| `315` | `WHO #channel` | WHO 응답 종료 | End of WHO list |
+
+`WHO #channel`은 member마다 `352`를 보내고 마지막에 `315`를 보낸다.
+channel이 없어도 현재 구현은 `315 End of WHO list`로 끝낸다.
+
+---
+
+## MODE 응답
+
+| 코드 | 사용 command | 발생 상황 | 현재 응답 의미 |
+|---|---|---|---|
+| `221` | `MODE <myNick>` | 자신의 user mode 조회 | `+i` 응답 |
+| `324` | `MODE #channel` | channel mode 조회 | 현재 channel mode 반환 |
+| `368` | `MODE #channel b` | ban list 조회 | ban 기능 없이 End of Channel Ban List만 응답 |
+| `441` | `MODE #channel +o/-o nick` | target이 channel member가 아님 | They aren't on that channel |
+| `442` | `MODE #channel ...` | sender가 channel member가 아님 | You're not on that channel |
+| `451` | `MODE` | 미등록 client | You have not registered |
+| `461` | `MODE` | parameter 부족, `+k`, `+l`, `+o`에 필요한 parameter 부족 | Not enough parameters |
+| `472` | `MODE #channel +x` | 지원하지 않는 mode 문자 | is unknown mode char to me |
+| `482` | `MODE #channel ...` | sender가 channel operator가 아님 | You're not channel operator |
+| `502` | `MODE <otherNick> ...` | 다른 user의 user mode를 보거나 바꾸려 함 | Cant change mode for other users |
+
+주의할 점은 `+i`가 두 종류라는 것이다.
+
+```text
+MODE #test +i
+ -> channel mode +i
+ -> invite-only channel
+
+MODE <myNick> +i
+ -> user mode +i
+ -> 현재 서버는 irssi 호환용으로 조용히 무시
+```
+
+---
+
+## 내부 bool 반환값
+
+numeric reply와 별개로, command handler들은 `bool`을 반환한다.
+이 값은 command 성공/실패가 아니라 client 연결을 유지할지 여부를 나타낸다.
+
+| 반환값 | 의미 | 대표 상황 |
+|---|---|---|
+| `true` | 연결 유지 | 정상 command, parameter error, 권한 error, unknown command |
+| `false` | 연결 종료 필요 | `QUIT`, socket error, peer close |
+
+예를 들어 `461`, `482`, `421` 같은 에러 응답을 보내도 연결은 유지된다.
+반대로 `QUIT`은 `ERROR :Closing Link`를 보낸 뒤 `false`를 반환해서 서버가 client를 제거하게 만든다.
 
 ---
 
