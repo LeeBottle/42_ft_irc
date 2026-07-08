@@ -78,6 +78,11 @@ bool    ClientCommand::nick(Client &client, const Parser &message)
         return (true);
     }
 
+    if (wasRegistered)
+    {
+        reply(client, ":" + client.prefix() + " NICK :" + params[0] + "\r\n");
+    }
+    
     client.setNickname(params[0]);
     sendRegistrationIfReady(client, wasRegistered);
 
