@@ -79,50 +79,7 @@ void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
     }
 }
 
-void    Server::handleClient(int clientFd, short revents)
-{
-    Client  *client;
-    bool    hasReceiveData;
 
-    hasReceiveData = false;
-    if (revents & (POLLERR | POLLHUP | POLLNVAL))
-    {
-        _clientIO.remove(_clients, _channels, clientFd);
-        return ;
-    }
-
-    // 1. 먼저 수신 데이터가 있다면 커널에서 바이트를 바짝 읽어옵니다.
-    if (revents & POLLIN)
-    {
-        if (!_clientIO.receive(_clients, _channels, clientFd))
-            return ;
-        hasReceiveData = true;
-    }
-
-    client = _clients.findByFd(clientFd);
-
-    // 2. ⚠️ 중요: 수신된 데이터를 파싱하고 명령을 먼저 처리합니다 (순서 격상)
-    // 이 과정에서 다른 유저들이나 본인의 SendBuffer에 신규 대기 패킷들이 쌓이게 됩니다.
-    if (hasReceiveData && client != NULL)
-    {
-        if (!_message.process(*client))
-        {
-            _clientIO.send(_clients, _channels, clientFd);
-            _clientIO.remove(_clients, _channels, clientFd);
-            return;
-        }
-    }
-
-    // 3. ⚠️ 중요: 명령 처리가 완전히 끝난 후, 혹은 원래 POLLOUT 이벤트가 왔을 때 
-    // 최신 상태의 SendBuffer 내용을 커널 소켓으로 즉시 밀어냅니다.
-    if ((revents & POLLOUT) || (client != NULL && client->sendBuffer().hasData()))
-    {
-        _clientIO.send(_clients, _channels, clientFd);
-    }
-}
-
-
-/*
 void    Server::handleClient(int clientFd, short revents)
 {
     Client  *client;
@@ -153,7 +110,7 @@ void    Server::handleClient(int clientFd, short revents)
         _clientIO.remove(_clients, _channels, clientFd);
     }
 }
-*/
+
 
 void    Server::handleTerminal()
 {

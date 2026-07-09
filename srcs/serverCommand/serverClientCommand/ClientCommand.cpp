@@ -2,6 +2,7 @@
 #include "client/Client.hpp"
 #include "client/ClientManager.hpp"
 #include "parser/Parser.hpp"
+#include "channel/Channel.hpp"
 
 #include <vector>
 
@@ -77,13 +78,29 @@ bool    ClientCommand::nick(Client &client, const Parser &message)
 
         return (true);
     }
+	std::string oldPrefix = client.prefix();
 
     if (wasRegistered)
     {
-        reply(client, ":" + client.prefix() + " NICK :" + params[0] + "\r\n");
+        reply(client, ":" + oldPrefix + " NICK :" + params[0] + "\r\n");
     }
-    
+
     client.setNickname(params[0]);
+
+    if (wasRegistered)
+    {
+        std::string nickNotice = ":" + oldPrefix + " NICK :" + client.nickname() + "\r\n";
+        const std::vector<Client *> &allClients = _clients.clients();
+
+        for (size_t i = 0; i < allClients.size(); ++i)
+        {
+            if (allClients[i] != &client)
+            {
+                reply(*allClients[i], nickNotice);
+            }
+        }
+    }
+
     sendRegistrationIfReady(client, wasRegistered);
 
     return (true);
