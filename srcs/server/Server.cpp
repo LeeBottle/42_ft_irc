@@ -128,15 +128,14 @@ bool    Server::acceptClients()
 {
     int clientFd;
 
-    while (true)
-    {
-        if (!_listener.acceptClient(clientFd))
-            return (false);
+    if (!_listener.acceptClient(clientFd))
+        return (false);
 
-        if (clientFd == -1)
-            return (true);
+    if (clientFd == -1)
+        return (true);
 
-        _clients.add(clientFd);
-        std::cout << "client connected with fd " << clientFd << std::endl;
-    }
+    _clients.add(clientFd);
+    std::cout << "client connected with fd " << clientFd << std::endl;
+    
+    return (true);
 }

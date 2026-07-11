@@ -113,16 +113,7 @@ bool    Listener::acceptClient(int &clientFd)
     clientFd = ::accept(_listenFd, NULL, NULL);
     if (clientFd == -1)
     {
-        if (errno == EINTR)
-            return (true);
-
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-        {
-            clientFd = -1;
-            return (true);
-        }
-
-        return (reportSystemError("accept"));
+        return (true);
     }
 
     if (!setNonBlocking(clientFd))
