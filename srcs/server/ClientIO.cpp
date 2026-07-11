@@ -57,35 +57,31 @@ bool    ClientIO::receive(ClientManager &clients, ChannelManager &channels,
     if (client == NULL)
         return (false);
 
-    while (true)
+    bytesRead = ::recv(clientFd, buffer, sizeof(buffer), 0);
+    if (bytesRead > 0)
     {
-        bytesRead = ::recv(clientFd, buffer, sizeof(buffer), 0);
-        if (bytesRead > 0)
-        {
 #ifdef DEBUG_RECV
-            printRawLog(clientFd, buffer, bytesRead);
+        printRawLog(clientFd, buffer, bytesRead);
 #endif
-            client->receiveBuffer().append(buffer,
-                static_cast<size_t>(bytesRead));
-            continue ;
-        }
+        client->receiveBuffer().append(buffer,
+            static_cast<size_t>(bytesRead));
+        return (true);
+    }
 
-        if (bytesRead == 0)
-        {
-            remove(clients, channels, clientFd);
-            return (false);
-        }
-
-        if (errno == EINTR)
-            continue ;
-
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return (true);
-
+    if (bytesRead == 0)
+    {
         remove(clients, channels, clientFd);
-
         return (false);
     }
+
+    if (errno == EINTR)
+        return (true);
+
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
+        return (true);
+
+    remove(clients, channels, clientFd);
+    return (false);
 }
 
 
@@ -96,26 +92,27 @@ void    ClientIO::send(ClientManager &clients, ChannelManager &channels,
     ssize_t sendByteCount;
 
     client = clients.findByFd(clientFd);
-    if (client == NULL)
+    if (client == NULL || !client->sendBuffer().hasData())
         return ;
 
-    while (client->sendBuffer().hasData())
+    sendByteCount = ::send(clientFd, client->sendBuffer().data(),
+            client->sendBuffer().size(), 0);
+
+    if (sendByteCount > 0)
     {
-        sendByteCount = ::send(clientFd, client->sendBuffer().data(),
-                client->sendBuffer().size(), 0);
-        if (sendByteCount > 0)
-            client->sendBuffer().remove(static_cast<size_t>(sendByteCount));
-        else if (sendByteCount == -1 && errno == EINTR)
-            continue ;
-        else if (sendByteCount == -1
-            && (errno == EAGAIN || errno == EWOULDBLOCK))
-            return ;
-        else
-        {
-            remove(clients, channels, clientFd);
-            return ;
-        }
+        client->sendBuffer().remove(
+            static_cast<size_t>(sendByteCount));
+        return ;
     }
+
+    if (sendByteCount == -1 && errno == EINTR)
+        return ;
+
+    if (sendByteCount == -1
+        && (errno == EAGAIN || errno == EWOULDBLOCK))
+        return ;
+
+    remove(clients, channels, clientFd);
 }
 
 

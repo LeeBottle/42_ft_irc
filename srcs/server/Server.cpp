@@ -104,12 +104,20 @@ void    Server::handleClient(int clientFd, short revents)
     {
         if (!_clientIO.receive(_clients, _channels, clientFd))
             return ;
+        
+        if (_signal.shouldStop())
+            return ;
 
         hasReceiveData = true;
     }
 
     if (revents & POLLOUT)
+    {
         _clientIO.send(_clients, _channels, clientFd);
+
+        if (_signal.shouldStop())
+            return ;
+    }
 
     client = _clients.findByFd(clientFd);
     if (hasReceiveData && client != NULL && !_message.process(*client))
