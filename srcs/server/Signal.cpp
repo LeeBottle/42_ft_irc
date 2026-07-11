@@ -38,14 +38,14 @@ bool    Signal::setup()
     if (::sigemptyset(&action.sa_mask) == -1)
         return (reportSystemError("sigemptyset"));
 
-    if (::sigaction(SIGINT, &action, NULL) == -1)
+    if (::sigaction(SIGINT, &action, NULL) == -1)   // cause ctrl+C
         return (reportSystemError("sigaction"));
 
-    if (::sigaction(SIGTERM, &action, NULL) == -1)
+    if (::sigaction(SIGTERM, &action, NULL) == -1)  // cause recieve kill
         return (reportSystemError("sigaction"));
 
     std::memset(&ignoreAction, 0, sizeof(ignoreAction));
-    ignoreAction.sa_handler = SIG_IGN;
+    ignoreAction.sa_handler = SIG_IGN;      // for ignoring SIGPIPE
 
     if (::sigemptyset(&ignoreAction.sa_mask) == -1)
         return (reportSystemError("sigemptyset"));
@@ -65,7 +65,7 @@ bool    Signal::shouldStop() const
 
 void    Signal::requestStop()
 {
-    g_serverStopRequested = 1;
+    g_serverStopRequested = 1;  // used command DIE except signal handler
 }
 
 

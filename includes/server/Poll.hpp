@@ -13,7 +13,8 @@ public:
     Poll();
     ~Poll();
 
-    void    build(std::vector<struct pollfd> &, Listener &, ClientManager &) const;
+    void    build(std::vector<struct pollfd> &, Listener &, 
+                ClientManager &) const;
 
 private:
     Poll(const Poll &);

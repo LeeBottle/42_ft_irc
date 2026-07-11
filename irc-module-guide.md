@@ -121,30 +121,124 @@
 ```text
 /
 ├── Makefile
+├── en.subject.pdf
+├── irc-module-guide.md
+│
 ├── includes
 │   ├── channel
+│   │   ├── Channel.hpp
+│   │   ├── ChannelManager.hpp
+│   │   ├── InviteList.hpp
+│   │   ├── MemberList.hpp
+│   │   ├── ModeState.hpp
+│   │   └── OperatorList.hpp
+│   │
 │   ├── client
+│   │   ├── Client.hpp
+│   │   ├── ClientManager.hpp
+│   │   ├── ReceiveBuffer.hpp
+│   │   └── SendBuffer.hpp
+│   │
 │   ├── event
+│   │   └── Event.hpp
+│   │
 │   ├── parser
+│   │   └── Parser.hpp
+│   │
 │   ├── server
-│   ├── serverCommand
-│   │   ├── serverChannelCommand
-│   │   │   ├── command
-│   │   │   └── mode
-│   │   └── serverClientCommand
-│   └── serverMessage
+│   │   ├── ClientIO.hpp
+│   │   ├── Listener.hpp
+│   │   ├── Poll.hpp
+│   │   ├── Server.hpp
+│   │   └── Signal.hpp
+│   │
+│   ├── serverMessage
+│   │   └── Message.hpp
+│   │
+│   └── serverCommand
+│       ├── Command.hpp
+│       │
+│       ├── serverClientCommand
+│       │   └── ClientCommand.hpp
+│       │
+│       └── serverChannelCommand
+│           ├── CommandHelper.hpp
+│           │
+│           ├── command
+│           │   ├── Invite.hpp
+│           │   ├── Join.hpp
+│           │   ├── Kick.hpp
+│           │   ├── Names.hpp
+│           │   ├── Part.hpp
+│           │   ├── Privmsg.hpp
+│           │   ├── Topic.hpp
+│           │   └── Who.hpp
+│           │
+│           └── mode
+│               ├── Mode.hpp
+│               ├── ModeApplier.hpp
+│               ├── ModeChange.hpp
+│               ├── ModeChecker.hpp
+│               └── ModeParser.hpp
+│
 └── srcs
+    ├── main.cpp
+    │
     ├── channel
+    │   ├── Channel.cpp
+    │   ├── ChannelManager.cpp
+    │   ├── InviteList.cpp
+    │   ├── MemberList.cpp
+    │   ├── ModeState.cpp
+    │   └── OperatorList.cpp
+    │
     ├── client
+    │   ├── Client.cpp
+    │   ├── ClientManager.cpp
+    │   ├── ReceiveBuffer.cpp
+    │   └── SendBuffer.cpp
+    │
     ├── event
+    │   └── Event.cpp
+    │
     ├── parser
+    │   └── Parser.cpp
+    │
     ├── server
-    ├── serverCommand
-    │   ├── serverChannelCommand
-    │   │   ├── command
-    │   │   └── mode
-    │   └── serverClientCommand
-    └── serverMessage
+    │   ├── ClientIO.cpp
+    │   ├── Listener.cpp
+    │   ├── Poll.cpp
+    │   ├── Server.cpp
+    │   └── Signal.cpp
+    │
+    ├── serverMessage
+    │   └── Message.cpp
+    │
+    └── serverCommand
+        ├── Command.cpp
+        │
+        ├── serverClientCommand
+        │   └── ClientCommand.cpp
+        │
+        └── serverChannelCommand
+            ├── CommandHelper.cpp
+            │
+            ├── command
+            │   ├── Invite.cpp
+            │   ├── Join.cpp
+            │   ├── Kick.cpp
+            │   ├── Names.cpp
+            │   ├── Part.cpp
+            │   ├── Privmsg.cpp
+            │   ├── Topic.cpp
+            │   └── Who.cpp
+            │
+            └── mode
+                ├── Mode.cpp
+                ├── ModeApplier.cpp
+                ├── ModeChange.cpp
+                ├── ModeChecker.cpp
+                └── ModeParser.cpp
 ```
 
 ---

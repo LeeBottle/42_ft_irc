@@ -22,7 +22,6 @@ private:
 
     bool    createSocket();
     bool    setSocketOption();
-    bool    setNonBlocking();
     bool    setNonBlocking(int);
     bool    bindSocket();
     bool    listenSocket();

@@ -30,7 +30,7 @@ void    Poll::appendTerminal(std::vector<struct pollfd> &pollFds) const
 {
     struct pollfd pollFd;
 
-    if (!isatty(STDIN_FILENO))
+    if (!isatty(STDIN_FILENO))  // allowed only terminal
         return ;
 
     pollFd.fd = STDIN_FILENO;
@@ -46,7 +46,7 @@ void    Poll::appendListener(std::vector<struct pollfd> &pollFds,
     struct pollfd pollFd;
 
     pollFd.fd = listener.fd();
-    pollFd.events = POLLIN;
+    pollFd.events = POLLIN;  // request new client connection in accept queue
     pollFd.revents = 0;
     pollFds.push_back(pollFd);
 }
@@ -65,7 +65,7 @@ void    Poll::appendClients(std::vector<struct pollfd> &pollFds,
         pollFd.events = POLLIN;
 
         if ((*it)->sendBuffer().hasData())
-            pollFd.events |= POLLOUT;
+            pollFd.events |= POLLOUT;   // pollFd.events = POLLIN | POLLOUT
 
         pollFd.revents = 0;
         pollFds.push_back(pollFd);

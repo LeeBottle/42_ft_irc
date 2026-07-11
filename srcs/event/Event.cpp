@@ -16,12 +16,12 @@ Event::~Event()
 
 bool    Event::wait(std::vector<struct pollfd> &pollFds)
 {
-    int readyCount;
+    int pollResult;
 
-    readyCount = ::poll(&pollFds[0], pollFds.size(), -1);
-    if (readyCount == -1)
+    pollResult = ::poll(&pollFds[0], pollFds.size(), -1);
+    if (pollResult == -1)   // if poll() fail, return -1
     {
-        if (errno == EINTR)
+        if (errno == EINTR)     // interrupted system call
             return (true);
 
         return (reportSystemError("poll"));

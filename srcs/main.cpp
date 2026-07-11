@@ -40,9 +40,6 @@ static bool isValidPassword(const std::string &password)
     if (password.empty() || password.size() > 504)
         return (false);
 
-    if (password.find('\0') != std::string::npos)
-        return (false);
-
     if (password.find('\r') != std::string::npos)
         return (false);
 

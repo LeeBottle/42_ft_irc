@@ -30,7 +30,7 @@ bool    Listener::setup()
     if (!setSocketOption())
         return (false);
 
-    if (!setNonBlocking())
+    if (!setNonBlocking(_listenFd))
         return (false);
 
     if (!bindSocket())
@@ -63,12 +63,6 @@ bool    Listener::setSocketOption()
         return (reportSystemError("setsockopt"));
 
     return (true);
-}
-
-
-bool    Listener::setNonBlocking()
-{
-    return (setNonBlocking(_listenFd));
 }
 
 
@@ -113,10 +107,13 @@ bool    Listener::acceptClient(int &clientFd)
     clientFd = ::accept(_listenFd, NULL, NULL);
     if (clientFd == -1)
     {
-        if (errno == EINTR)
+        if (errno == EINTR)  // SIGINT or SIGTERM
+        {
+            clientFd = -1;
             return (true);
+        }
 
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        if (errno == EAGAIN || errno == EWOULDBLOCK)  // empty accept queue
         {
             clientFd = -1;
             return (true);

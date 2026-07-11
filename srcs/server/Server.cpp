@@ -72,9 +72,17 @@ void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
             if (revents & POLLIN)
                 handleTerminal();
         }
-        else if (fd == _listener.fd() && (revents & POLLIN))
-            acceptClients();
-        else if (fd != _listener.fd())
+        else if (fd == _listener.fd())
+        {
+            if (revents & (POLLERR | POLLHUP | POLLNVAL))
+            {
+                std::cerr << "Error: listener socket failure" << std::endl;
+                _signal.requestStop();
+            }
+            else if ((revents & POLLIN) && !acceptClients())
+                _signal.requestStop();
+        }
+        else
             handleClient(fd, revents);
     }
 }
