@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by byeolee, hugim, sanghul2*
+*This project has been created as part of the 42 curriculum by byeolee, hugim, sanghul2.*
 
 # Description
 This project is an IRC (Internet Relay Chat) server implemented in compliance with the C++ 98 standard. It operates based on TCP/IP (v4 or v6) communication, allowing external IRC clients to connect to the server and utilize actual chat services. Excluding server-to-server federation features, this project aims for a single-server architecture that efficiently handles requests from multiple clients.
