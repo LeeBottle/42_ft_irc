@@ -6,6 +6,7 @@
 #include <vector>
 
 
+// Initializes this object with the supplied state.
 ClientCommand::ClientCommand(const std::string &password,
     ClientManager &clients)
     : _password(password), _clients(clients)
@@ -13,11 +14,13 @@ ClientCommand::ClientCommand(const std::string &password,
 }
 
 
+// Destroys this object and releases its owned resources.
 ClientCommand::~ClientCommand()
 {
 }
 
 
+// Performs the pass operation.
 bool    ClientCommand::pass(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -55,6 +58,7 @@ bool    ClientCommand::pass(Client &client, const Parser &message)
 }
 
 
+// Performs the nick operation.
 bool    ClientCommand::nick(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -85,6 +89,7 @@ bool    ClientCommand::nick(Client &client, const Parser &message)
 }
 
 
+// Performs the user operation.
 bool    ClientCommand::user(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -115,6 +120,7 @@ bool    ClientCommand::user(Client &client, const Parser &message)
 }
 
 
+// Performs the cap operation.
 bool    ClientCommand::cap(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -126,6 +132,7 @@ bool    ClientCommand::cap(Client &client, const Parser &message)
 }
 
 
+// Performs the ping operation.
 bool    ClientCommand::ping(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -144,6 +151,7 @@ bool    ClientCommand::ping(Client &client, const Parser &message)
 }
 
 
+// Performs the pong operation.
 bool    ClientCommand::pong(Client &client, const Parser &message)
 {
     (void)client;
@@ -153,6 +161,7 @@ bool    ClientCommand::pong(Client &client, const Parser &message)
 }
 
 
+// Performs the quit operation.
 bool    ClientCommand::quit(Client &client, const Parser &message)
 {
     (void)message;
@@ -162,6 +171,7 @@ bool    ClientCommand::quit(Client &client, const Parser &message)
 }
 
 
+// Performs the privmsg operation.
 bool    ClientCommand::privmsg(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -204,6 +214,7 @@ bool    ClientCommand::privmsg(Client &client, const Parser &message)
 }
 
 
+// Performs the unknown operation.
 bool    ClientCommand::unknown(Client &client, const Parser &message)
 {
     reply(client, ":ircserv 421 " + target(client)
@@ -213,12 +224,14 @@ bool    ClientCommand::unknown(Client &client, const Parser &message)
 }
 
 
+// Queues an IRC reply for a client.
 void    ClientCommand::reply(Client &client, const std::string &message) const
 {
     client.sendBuffer().append(message);
 }
 
 
+// Returns the nickname used as the reply target.
 const std::string   &ClientCommand::target(Client &client) const
 {
     static const std::string unknownTarget = "*";
@@ -230,6 +243,7 @@ const std::string   &ClientCommand::target(Client &client) const
 }
 
 
+// Performs the send registration if ready operation.
 void    ClientCommand::sendRegistrationIfReady(Client &client,
     bool wasRegistered)
 {

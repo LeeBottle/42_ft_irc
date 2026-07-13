@@ -83,6 +83,7 @@ void    commandToOthers(Channel &channel, Client &sender,
 }
 
 
+// Performs the command target operation.
 std::string commandTarget(Client &client)
 {
     if (client.hasNickname())
@@ -92,6 +93,7 @@ std::string commandTarget(Client &client)
 }
 
 
+// Performs the command member names operation.
 std::string commandMemberNames(Channel &channel)
 {
     std::vector<Client *>::const_iterator   it;

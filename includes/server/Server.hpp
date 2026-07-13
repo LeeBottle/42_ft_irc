@@ -14,12 +14,14 @@
 # include "server/Signal.hpp"
 # include "serverMessage/Message.hpp"
 
+// Coordinates listener, poll loop, clients, channels, commands
 class Server
 {
 public:
     Server(int, const std::string &);
     ~Server();
 
+    // server event loop
     bool    run();
 
 private:

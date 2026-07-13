@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 
+// Initializes this object with the supplied state.
 Listener::Listener(int port)
     : _port(port),
       _listenFd(-1)
@@ -16,12 +17,14 @@ Listener::Listener(int port)
 }
 
 
+// Destroys this object and releases its owned resources.
 Listener::~Listener()
 {
     closeSocket();
 }
 
 
+// Sets up the resources required by this component.
 bool    Listener::setup()
 {
     if (!createSocket())
@@ -43,6 +46,7 @@ bool    Listener::setup()
 }
 
 
+// Performs the create socket operation.
 bool    Listener::createSocket()
 {
     _listenFd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -53,6 +57,7 @@ bool    Listener::createSocket()
 }
 
 
+// Updates socket option.
 bool    Listener::setSocketOption()
 {
     int option;
@@ -66,6 +71,7 @@ bool    Listener::setSocketOption()
 }
 
 
+// Updates non blocking.
 bool    Listener::setNonBlocking(int fd)
 {
     if (::fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
@@ -75,6 +81,7 @@ bool    Listener::setNonBlocking(int fd)
 }
 
 
+// Performs the bind socket operation.
 bool    Listener::bindSocket()
 {
     struct sockaddr_in address;
@@ -92,6 +99,7 @@ bool    Listener::bindSocket()
 }
 
 
+// Performs the listen socket operation.
 bool    Listener::listenSocket()
 {
     if (::listen(_listenFd, SOMAXCONN) == -1)
@@ -102,6 +110,7 @@ bool    Listener::listenSocket()
 }
 
 
+// Accepts one pending connection and configures its client socket.
 bool    Listener::acceptClient(int &clientFd)
 {
     clientFd = ::accept(_listenFd, NULL, NULL);
@@ -133,12 +142,14 @@ bool    Listener::acceptClient(int &clientFd)
 }
 
 
+// Returns the owned socket file descriptor.
 int Listener::fd() const
 {
     return (_listenFd);
 }
 
 
+// Performs the close socket operation.
 void    Listener::closeSocket()
 {
     if (_listenFd != -1)
@@ -149,6 +160,7 @@ void    Listener::closeSocket()
 }
 
 
+// Performs the report system error operation.
 bool    Listener::reportSystemError(const char *functionName)
 {
     std::cerr << functionName << ": " << std::strerror(errno) << std::endl;

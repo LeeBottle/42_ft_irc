@@ -5,15 +5,18 @@
 #include <iostream>
 
 
+// Initializes this object with the supplied state.
 Event::Event()
 {
 }
 
+// Destroys this object and releases its owned resources.
 Event::~Event()
 {
 }
 
 
+// Waits until a monitored file descriptor becomes ready.
 bool    Event::wait(std::vector<struct pollfd> &pollFds)
 {
     int pollResult;
@@ -31,6 +34,7 @@ bool    Event::wait(std::vector<struct pollfd> &pollFds)
 }
 
 
+// Performs the report system error operation.
 bool    Event::reportSystemError(const char *functionName)
 {
     std::cerr << functionName << ": " << std::strerror(errno) << std::endl;

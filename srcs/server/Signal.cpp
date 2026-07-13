@@ -9,6 +9,7 @@
 static volatile sig_atomic_t   g_serverStopRequested = 0;
 
 
+// Performs the handle stop signal operation.
 static void handleStopSignal(int signalNumber)
 {
     (void)signalNumber;
@@ -16,16 +17,19 @@ static void handleStopSignal(int signalNumber)
 }
 
 
+// Initializes this object with the supplied state.
 Signal::Signal()
 {
 }
 
 
+// Destroys this object and releases its owned resources.
 Signal::~Signal()
 {
 }
 
 
+// Sets up the resources required by this component.
 bool    Signal::setup()
 {
     struct sigaction action;
@@ -57,18 +61,21 @@ bool    Signal::setup()
 }
 
 
+// Reports whether shutdown has been requested.
 bool    Signal::shouldStop() const
 {
     return (g_serverStopRequested != 0);
 }
 
 
+// Requests a graceful server shutdown.
 void    Signal::requestStop()
 {
     g_serverStopRequested = 1;  // used command DIE except signal handler
 }
 
 
+// Performs the report system error operation.
 bool    Signal::reportSystemError(const char *functionName) const
 {
     std::cerr << functionName << ": " << std::strerror(errno) << std::endl;

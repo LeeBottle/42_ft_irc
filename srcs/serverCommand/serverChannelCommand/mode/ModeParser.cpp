@@ -7,6 +7,7 @@
 #include <vector>
 
 
+// Initializes this object with the supplied state.
 ModeParser::ModeParser(ClientManager &clients, ChannelManager &channels)
     : _clients(clients)
 {
@@ -14,11 +15,13 @@ ModeParser::ModeParser(ClientManager &clients, ChannelManager &channels)
 }
 
 
+// Destroys this object and releases its owned resources.
 ModeParser::~ModeParser()
 {
 }
 
 
+// Performs the collect operation.
 bool    ModeParser::collect(Client &client, Channel &channel,
     const Parser &message, ModeChange &change)
 {
@@ -41,6 +44,7 @@ bool    ModeParser::collect(Client &client, Channel &channel,
 }
 
 
+// Performs the collect letter operation.
 bool    ModeParser::collectLetter(Client &client, Channel &channel,
     const std::vector<std::string> &params, ModeChange &change, char mode)
 {
@@ -73,6 +77,7 @@ bool    ModeParser::collectLetter(Client &client, Channel &channel,
 }
 
 
+// Performs the collect key operation.
 bool    ModeParser::collectKey(Client &client, Channel &channel,
     const std::vector<std::string> &params, ModeChange &change)
 {
@@ -108,6 +113,7 @@ bool    ModeParser::collectKey(Client &client, Channel &channel,
 }
 
 
+// Performs the collect limit operation.
 bool    ModeParser::collectLimit(Client &client, Channel &channel,
     const std::vector<std::string> &params, ModeChange &change)
 {
@@ -142,6 +148,7 @@ bool    ModeParser::collectLimit(Client &client, Channel &channel,
 }
 
 
+// Performs the collect operator operation.
 bool    ModeParser::collectOperator(Client &client, Channel &channel,
     const std::vector<std::string> &params, ModeChange &change)
 {
@@ -182,6 +189,7 @@ bool    ModeParser::collectOperator(Client &client, Channel &channel,
 }
 
 
+// Performs the send ban end operation.
 void    ModeParser::sendBanEnd(Client &client, Channel &channel)
 {
     commandReply(client, ":ircserv 368 " + commandTarget(client)
@@ -189,6 +197,7 @@ void    ModeParser::sendBanEnd(Client &client, Channel &channel)
 }
 
 
+// Performs the parse limit operation.
 bool    ModeParser::parseLimit(const std::string &value, size_t &limit) const
 {
     size_t index;

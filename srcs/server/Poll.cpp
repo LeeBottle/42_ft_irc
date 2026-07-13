@@ -6,16 +6,19 @@
 #include <unistd.h>
 
 
+// Initializes this object with the supplied state.
 Poll::Poll()
 {
 }
 
 
+// Destroys this object and releases its owned resources.
 Poll::~Poll()
 {
 }
 
 
+// Rebuilds the poll descriptor list from the listener and connected clients.
 void    Poll::build(std::vector<struct pollfd> &pollFds, Listener &listener,
     ClientManager &clients) const
 {
@@ -26,6 +29,7 @@ void    Poll::build(std::vector<struct pollfd> &pollFds, Listener &listener,
 }
 
 
+// Performs the append terminal operation.
 void    Poll::appendTerminal(std::vector<struct pollfd> &pollFds) const
 {
     struct pollfd pollFd;
@@ -40,6 +44,7 @@ void    Poll::appendTerminal(std::vector<struct pollfd> &pollFds) const
 }
 
 
+// Performs the append listener operation.
 void    Poll::appendListener(std::vector<struct pollfd> &pollFds,
     Listener &listener) const
 {
@@ -51,6 +56,7 @@ void    Poll::appendListener(std::vector<struct pollfd> &pollFds,
     pollFds.push_back(pollFd);
 }
 
+// Performs the append clients operation.
 void    Poll::appendClients(std::vector<struct pollfd> &pollFds,
     ClientManager &clientManager) const
 {

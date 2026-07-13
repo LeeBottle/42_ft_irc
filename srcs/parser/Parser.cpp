@@ -3,6 +3,7 @@
 #include <cctype>
 
 
+// Performs the skip spaces operation.
 static void skipSpaces(const std::string &line, size_t &index)
 {
     while (index < line.size() && line[index] == ' ')
@@ -10,6 +11,7 @@ static void skipSpaces(const std::string &line, size_t &index)
 }
 
 
+// Performs the to upper operation.
 static std::string  toUpper(const std::string &value)
 {
     std::string result;
@@ -28,6 +30,7 @@ static std::string  toUpper(const std::string &value)
 }
 
 
+// Performs the parse name operation.
 static std::string  parseName(const std::string &line, size_t &index)
 {
     size_t  start;
@@ -40,6 +43,7 @@ static std::string  parseName(const std::string &line, size_t &index)
 }
 
 
+// Performs the parse params operation.
 static void parseParams(const std::string &line, size_t &index,
     std::vector<std::string> &params)
 {
@@ -66,6 +70,7 @@ static void parseParams(const std::string &line, size_t &index,
 }
 
 
+// Performs the classify type operation.
 static Parser::Type    classifyType(const std::string &name)
 {
     if (name == "CAP")
@@ -120,6 +125,7 @@ static Parser::Type    classifyType(const std::string &name)
 }
 
 
+// Initializes this object with the supplied state.
 Parser::Parser()
     : _name(),
       _params(),
@@ -128,29 +134,34 @@ Parser::Parser()
 }
 
 
+// Destroys this object and releases its owned resources.
 Parser::~Parser()
 {
 }
 
 
+// Performs the name operation.
 const std::string   &Parser::name() const
 {
     return (_name);
 }
 
 
+// Performs the params operation.
 const std::vector<std::string>  &Parser::params() const
 {
     return (_params);
 }
 
 
+// Performs the type operation.
 Parser::Type    Parser::type() const
 {
     return (_type);
 }
 
 
+// Parses one IRC protocol line into command fields.
 bool    Parser::parse(const std::string &line)
 {
     size_t  index;

@@ -5,6 +5,7 @@
 #include "parser/Parser.hpp"
 
 
+// Initializes this object with the supplied state.
 Mode::Mode(ClientManager &clients, ChannelManager &channels)
     : _checker(clients, channels),
       _parser(clients, channels),
@@ -13,11 +14,13 @@ Mode::Mode(ClientManager &clients, ChannelManager &channels)
 }
 
 
+// Destroys this object and releases its owned resources.
 Mode::~Mode()
 {
 }
 
 
+// Validates and executes this IRC command.
 bool    Mode::handle(Client &client, const Parser &message)
 {
     Channel                 *channel;
@@ -37,6 +40,7 @@ bool    Mode::handle(Client &client, const Parser &message)
 }
 
 
+// Performs the broadcast operation.
 void    Mode::broadcast(Client &client, Channel &channel,
     const ModeChange &change) const
 {

@@ -8,6 +8,7 @@
 #include <vector>
 
 
+// Initializes this object with the supplied state.
 Invite::Invite(ClientManager &clients, ChannelManager &channels)
     : _clients(clients),
       _channels(channels)
@@ -15,11 +16,13 @@ Invite::Invite(ClientManager &clients, ChannelManager &channels)
 }
 
 
+// Destroys this object and releases its owned resources.
 Invite::~Invite()
 {
 }
 
 
+// Validates and executes this IRC command.
 bool    Invite::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();

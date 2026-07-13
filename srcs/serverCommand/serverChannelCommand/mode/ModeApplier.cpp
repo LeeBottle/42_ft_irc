@@ -2,16 +2,19 @@
 #include "channel/Channel.hpp"
 
 
+// Initializes this object with the supplied state.
 ModeApplier::ModeApplier()
 {
 }
 
 
+// Destroys this object and releases its owned resources.
 ModeApplier::~ModeApplier()
 {
 }
 
 
+// Applies .
 void    ModeApplier::apply(Channel &channel, const ModeChange &change)
 {
     std::vector<ModeOperation>::const_iterator  it;

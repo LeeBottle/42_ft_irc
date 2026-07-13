@@ -7,6 +7,7 @@
 #include <vector>
 
 
+// Initializes this object with the supplied state.
 Privmsg::Privmsg(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {
@@ -14,11 +15,13 @@ Privmsg::Privmsg(ClientManager &clients, ChannelManager &channels)
 }
 
 
+// Destroys this object and releases its owned resources.
 Privmsg::~Privmsg()
 {
 }
 
 
+// Validates and executes this IRC command.
 bool    Privmsg::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -50,6 +53,7 @@ bool    Privmsg::handle(Client &client, const Parser &message)
 }
 
 
+// Performs the send to channel operation.
 void    Privmsg::sendToChannel(Client &client, const std::string &target,
     const std::string &text)
 {

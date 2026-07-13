@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 
+// Initializes this object with the supplied state.
 Server::Server(int port, const std::string &password)
     : _password(password),
       _clients(),
@@ -21,11 +22,13 @@ Server::Server(int port, const std::string &password)
 }
 
 
+// Destroys this object and releases its owned resources.
 Server::~Server()
 {
 }
 
 
+// Runs the server event loop until shutdown is requested.
 bool    Server::run()
 {
     std::vector<struct pollfd>  pollFds;
@@ -52,6 +55,7 @@ bool    Server::run()
 }
 
 
+// Dispatches ready file descriptors returned by poll().
 void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
 {
     size_t index;
@@ -88,13 +92,21 @@ void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
 }
 
 
+// Processes read, write, hang-up, and error events for one client.
 void    Server::handleClient(int clientFd, short revents)
 {
     Client  *client;
     bool    hasReceiveData;
 
     hasReceiveData = false;
-    if (revents & (POLLERR | POLLHUP | POLLNVAL))
+
+    if (revents & (POLLERR | POLLNVAL))
+    {
+        _clientIO.remove(_clients, _channels, clientFd);
+        return ;
+    }
+
+    if ((revents & POLLHUP) && !(revents & POLLIN))
     {
         _clientIO.remove(_clients, _channels, clientFd);
         return ;
@@ -104,7 +116,7 @@ void    Server::handleClient(int clientFd, short revents)
     {
         if (!_clientIO.receive(_clients, _channels, clientFd))
             return ;
-        
+
         if (_signal.shouldStop())
             return ;
 
@@ -128,6 +140,7 @@ void    Server::handleClient(int clientFd, short revents)
 }
 
 
+// Processes a command read from standard input.
 void    Server::handleTerminal()
 {
     std::string line;
@@ -140,19 +153,19 @@ void    Server::handleTerminal()
 }
 
 
+// Accepts one pending client connection without blocking.
 bool    Server::acceptClients()
 {
     int clientFd;
 
-    while (true)
-    {
-        if (!_listener.acceptClient(clientFd))
-            return (false);
+    if (!_listener.acceptClient(clientFd))
+        return (false);
 
-        if (clientFd == -1)
-            return (true);
+    if (clientFd == -1)
+        return (true);
 
-        _clients.add(clientFd);
-        std::cout << "client connected with fd " << clientFd << std::endl;
-    }
+    _clients.add(clientFd);
+    std::cout << "client connected with fd " << clientFd << std::endl;
+
+    return (true);
 }

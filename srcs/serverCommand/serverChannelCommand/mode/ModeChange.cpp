@@ -3,6 +3,7 @@
 #include <cstddef>
 
 
+// Initializes this object with the supplied state.
 ModeOperation::ModeOperation()
     : sign('+'),
       mode('\0'),
@@ -13,6 +14,7 @@ ModeOperation::ModeOperation()
 }
 
 
+// Initializes this object with the supplied state.
 ModeChange::ModeChange()
     : changes(),
       params(),
@@ -24,6 +26,7 @@ ModeChange::ModeChange()
 }
 
 
+// Adds change.
 void    ModeChange::addChange(char mode)
 {
     if (currentSign != sign)

@@ -3,16 +3,19 @@
 #include <cstddef>
 
 
+// Initializes this object with the supplied state.
 OperatorList::OperatorList() : _operators()
 {
 }
 
 
+// Destroys this object and releases its owned resources.
 OperatorList::~OperatorList()
 {
 }
 
 
+// Reports whether s.
 bool    OperatorList::has(Client *client) const
 {
     std::vector<Client *>::const_iterator   it;
@@ -29,6 +32,7 @@ bool    OperatorList::has(Client *client) const
 }
 
 
+// Adds an item to this collection.
 bool    OperatorList::add(Client *client)
 {
     if (client == NULL || has(client))
@@ -40,6 +44,7 @@ bool    OperatorList::add(Client *client)
 }
 
 
+// Removes a disconnected client from channels and client storage.
 bool    OperatorList::remove(Client *client)
 {
     std::vector<Client *>::iterator it;

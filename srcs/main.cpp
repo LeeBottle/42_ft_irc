@@ -6,6 +6,7 @@
 #include <string>
 
 
+// Performs the convert port operation.
 static int  convertPort(const std::string &strPort)
 {
     int     port;
@@ -35,6 +36,7 @@ static int  convertPort(const std::string &strPort)
 }
 
 
+// Reports whether valid password.
 static bool isValidPassword(const std::string &password)
 {
     if (password.empty() || password.size() > 504)
@@ -50,6 +52,7 @@ static bool isValidPassword(const std::string &password)
 }
 
 
+// Performs the main operation.
 int main(int argc, char **argv)
 {
     int         port;

@@ -3,7 +3,9 @@
 
 # include <string>
 
+// Stores one IRC channel, its members, topic, and mode state.
 class Channel;
+// Stores one connected IRC client and its protocol state.
 class Client;
 
 bool    commandValidChannel(const std::string &name);

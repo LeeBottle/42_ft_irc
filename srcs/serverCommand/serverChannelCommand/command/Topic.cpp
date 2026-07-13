@@ -7,6 +7,7 @@
 #include <vector>
 
 
+// Initializes this object with the supplied state.
 Topic::Topic(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {
@@ -14,11 +15,13 @@ Topic::Topic(ClientManager &clients, ChannelManager &channels)
 }
 
 
+// Destroys this object and releases its owned resources.
 Topic::~Topic()
 {
 }
 
 
+// Validates and executes this IRC command.
 bool    Topic::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
