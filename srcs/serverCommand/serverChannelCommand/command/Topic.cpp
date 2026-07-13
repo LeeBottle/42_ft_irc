@@ -7,7 +7,6 @@
 #include <vector>
 
 
-// Initializes this object with the supplied state.
 Topic::Topic(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {

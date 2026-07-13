@@ -9,22 +9,18 @@
 #include <unistd.h>
 
 
-// Initializes this object with the supplied state.
-Listener::Listener(int port)
-    : _port(port),
-      _listenFd(-1)
+Listener::Listener(int port) : _port(port), _listenFd(-1)
 {
 }
 
 
-// Destroys this object and releases its owned resources.
 Listener::~Listener()
 {
     closeSocket();
 }
 
 
-// Sets up the resources required by this component.
+// set up listenig socket
 bool    Listener::setup()
 {
     if (!createSocket())
@@ -46,7 +42,7 @@ bool    Listener::setup()
 }
 
 
-// Performs the create socket operation.
+// create listening socket fd
 bool    Listener::createSocket()
 {
     _listenFd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -57,7 +53,7 @@ bool    Listener::createSocket()
 }
 
 
-// Updates socket option.
+// set listening socket option
 bool    Listener::setSocketOption()
 {
     int option;
@@ -71,7 +67,7 @@ bool    Listener::setSocketOption()
 }
 
 
-// Updates non blocking.
+// set listening socket fd as a non blocking
 bool    Listener::setNonBlocking(int fd)
 {
     if (::fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
@@ -81,25 +77,25 @@ bool    Listener::setNonBlocking(int fd)
 }
 
 
-// Performs the bind socket operation.
+// allocate IP and port to listening socket
 bool    Listener::bindSocket()
 {
     struct sockaddr_in address;
 
     std::memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = ::htonl(INADDR_ANY);
-    address.sin_port = ::htons(_port);
+    address.sin_family = AF_INET;       // IPv4 address system
+    address.sin_addr.s_addr = ::htonl(INADDR_ANY);  // 0.0.0.0
+    address.sin_port = ::htons(_port);  // network byte standard is big endian
 
     if (::bind(_listenFd, reinterpret_cast<struct sockaddr *>(&address),
-        sizeof(address)) == -1)
+        sizeof(address)) == -1)     // sockaddr_in * -> sockaddr *
         return (reportSystemError("bind"));
 
     return (true);
 }
 
 
-// Performs the listen socket operation.
+// Successful listen() move the socket to passive mode and enable queue
 bool    Listener::listenSocket()
 {
     if (::listen(_listenFd, SOMAXCONN) == -1)
@@ -110,13 +106,13 @@ bool    Listener::listenSocket()
 }
 
 
-// Accepts one pending connection and configures its client socket.
+// accept one pending connection and configure its client socket
 bool    Listener::acceptClient(int &clientFd)
 {
     clientFd = ::accept(_listenFd, NULL, NULL);
     if (clientFd == -1)
     {
-        if (errno == EINTR)  // SIGINT or SIGTERM
+        if (errno == EINTR)  // interrupted by a signal
         {
             clientFd = -1;
             return (true);
@@ -142,14 +138,13 @@ bool    Listener::acceptClient(int &clientFd)
 }
 
 
-// Returns the owned socket file descriptor.
-int Listener::fd() const
+// get listenFd
+int Listener::listenFd() const
 {
     return (_listenFd);
 }
 
 
-// Performs the close socket operation.
 void    Listener::closeSocket()
 {
     if (_listenFd != -1)
@@ -160,7 +155,6 @@ void    Listener::closeSocket()
 }
 
 
-// Performs the report system error operation.
 bool    Listener::reportSystemError(const char *functionName)
 {
     std::cerr << functionName << ": " << std::strerror(errno) << std::endl;

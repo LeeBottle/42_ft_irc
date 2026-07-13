@@ -14,25 +14,18 @@
 # include "serverCommand/serverChannelCommand/mode/Mode.hpp"
 # include "serverCommand/serverClientCommand/ClientCommand.hpp"
 
-// Owns channels and coordinates channel lookup and removal.
 class ChannelManager;
-// Stores one connected IRC client and its protocol state.
 class Client;
-// Owns connected clients and provides client lookup operations.
 class ClientManager;
-// Splits one IRC line into command, parameters, and trailing text.
 class Parser;
 
-// Routes parsed IRC messages to command implementations.
+// route parsed IRC message to command implementation
 class Command
 {
 public:
-    // Initializes this object with the supplied state.
     Command(const std::string &, ClientManager &, ChannelManager &);
-    // Destroys this object and releases its owned resources.
     ~Command();
 
-    // Executes this IRC command for the given client.
     bool    execute(Client &, const Parser &);
 
 private:
@@ -47,11 +40,8 @@ private:
     Kick            _kick;
     Mode            _mode;
 
-    // Initializes this object with the supplied state.
     Command();
-    // Initializes this object with the supplied state.
     Command(const Command &);
-    // Performs the &operator= operation.
     Command &operator=(const Command &);
 };
 

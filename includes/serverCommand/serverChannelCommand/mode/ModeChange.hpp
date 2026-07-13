@@ -5,10 +5,9 @@
 # include <string>
 # include <vector>
 
-// Stores one connected IRC client and its protocol state.
 class Client;
 
-// Defines the ModeOperation component and its interface.
+// define ModeOperation component and its interface
 struct ModeOperation
 {
     char        sign;
@@ -17,11 +16,9 @@ struct ModeOperation
     size_t      limit;
     Client      *target;
 
-    // Initializes this object with the supplied state.
     ModeOperation();
 };
 
-// Stores one parsed channel mode change.
 struct ModeChange
 {
     std::string changes;
@@ -32,10 +29,8 @@ struct ModeChange
 
     std::vector<ModeOperation>  operations;
 
-    // Initializes this object with the supplied state.
     ModeChange();
 
-    // Adds change.
     void    addChange(char);
 };
 

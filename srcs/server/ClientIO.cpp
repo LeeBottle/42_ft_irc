@@ -38,19 +38,17 @@ static void printRawLog(int clientFd, char *buffer, ssize_t bytesRead)
 #endif
 
 
-// Initializes this object with the supplied state.
 ClientIO::ClientIO()
 {
 }
 
 
-// Destroys this object and releases its owned resources.
 ClientIO::~ClientIO()
 {
 }
 
 
-// Receives available bytes from one client into its receive buffer.
+// receive available byte from one client into its receive buffer
 bool    ClientIO::receive(ClientManager &clients, ChannelManager &channels,
     int clientFd)
 {
@@ -90,7 +88,7 @@ bool    ClientIO::receive(ClientManager &clients, ChannelManager &channels,
 }
 
 
-// Sends pending bytes from one client send buffer.
+// send pending byte from one client send buffer
 void    ClientIO::send(ClientManager &clients, ChannelManager &channels,
     int clientFd)
 {
@@ -122,7 +120,7 @@ void    ClientIO::send(ClientManager &clients, ChannelManager &channels,
 }
 
 
-// Removes a disconnected client from channels and client storage.
+// removes disconnected client from channel and client storage
 void    ClientIO::remove(ClientManager &clients, ChannelManager &channels,
     int clientFd)
 {

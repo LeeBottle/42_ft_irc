@@ -14,14 +14,14 @@
 # include "server/Signal.hpp"
 # include "serverMessage/Message.hpp"
 
-// Coordinates listener, poll loop, clients, channels, commands
+// coordinate listener, poll loop, client, channel, command
 class Server
 {
 public:
     Server(int, const std::string &);
     ~Server();
 
-    // server event loop
+    // start server
     bool    run();
 
 private:
@@ -41,7 +41,7 @@ private:
 
     bool    acceptClients();
     void    handleClient(int, short);
-    void    handlePoll(std::vector<struct pollfd> &);
+    void    handlePoll(std::vector<struct pollfd>);
     void    handleTerminal();
 };
 

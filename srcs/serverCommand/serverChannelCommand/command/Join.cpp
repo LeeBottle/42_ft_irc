@@ -7,7 +7,6 @@
 #include <vector>
 
 
-// Initializes this object with the supplied state.
 Join::Join(ClientManager &clients, ChannelManager &channels) 
     : _channels(channels)
 {
@@ -15,13 +14,12 @@ Join::Join(ClientManager &clients, ChannelManager &channels)
 }
 
 
-// Destroys this object and releases its owned resources.
 Join::~Join()
 {
 }
 
 
-// Validates and executes this IRC command.
+// validate and execute this IRC command
 bool    Join::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -81,7 +79,7 @@ bool    Join::handle(Client &client, const Parser &message)
 }
 
 
-// Checks permission.
+// check permission
 Join::JoinResult    Join::checkPermission(Channel &channel, Client &client,
     const std::string &key) const
 {

@@ -7,7 +7,6 @@
 #include <vector>
 
 
-// Initializes this object with the supplied state.
 Names::Names(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {
@@ -15,13 +14,12 @@ Names::Names(ClientManager &clients, ChannelManager &channels)
 }
 
 
-// Destroys this object and releases its owned resources.
 Names::~Names()
 {
 }
 
 
-// Validates and executes this IRC command.
+// validate and execute this IRC command
 bool    Names::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();

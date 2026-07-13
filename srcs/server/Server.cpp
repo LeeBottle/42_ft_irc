@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 
-// Initializes this object with the supplied state.
 Server::Server(int port, const std::string &password)
     : _password(password),
       _clients(),
@@ -22,13 +21,12 @@ Server::Server(int port, const std::string &password)
 }
 
 
-// Destroys this object and releases its owned resources.
 Server::~Server()
 {
 }
 
 
-// Runs the server event loop until shutdown is requested.
+// start the server event loop until shutdown is requested
 bool    Server::run()
 {
     std::vector<struct pollfd>  pollFds;
@@ -41,7 +39,7 @@ bool    Server::run()
 
     while (!_signal.shouldStop())
     {
-        _poll.build(pollFds, _listener, _clients);
+        _poll.build(pollFds, _listener, _clients);  // add fd to monitor
 
         if (!_event.wait(pollFds))
             return (false);
@@ -55,39 +53,39 @@ bool    Server::run()
 }
 
 
-// Dispatches ready file descriptors returned by poll().
-void    Server::handlePoll(std::vector<struct pollfd> &pollFds)
+// routes poll events to terminal, listener, or client handlers
+void    Server::handlePoll(std::vector<struct pollfd> pollFds)
 {
     size_t index;
-    int    fd;
-    short  revents;
 
-    index = pollFds.size();
-    while (index > 0 && !_signal.shouldStop())
+    index = 0;
+    while (index < pollFds.size() && !_signal.shouldStop())
     {
-        --index;
-        fd = pollFds[index].fd;
-        revents = pollFds[index].revents;
-        if (revents == 0)
-            continue ;
-
-        if (fd == STDIN_FILENO)
+        if (pollFds[index].revents == 0)    // if no event, go to next index
         {
-            if (revents & POLLIN)
+            ++index;
+            continue ;
+        }
+
+        if (pollFds[index].fd == STDIN_FILENO)      // command DIE
+        {
+            if (pollFds[index].revents & POLLIN)
                 handleTerminal();
         }
-        else if (fd == _listener.fd())
+        else if (pollFds[index].fd == _listener.listenFd())  // listening socket
         {
-            if (revents & (POLLERR | POLLHUP | POLLNVAL))
+            if (pollFds[index].revents & (POLLERR | POLLHUP | POLLNVAL))
             {
                 std::cerr << "Error: listener socket failure" << std::endl;
                 _signal.requestStop();
             }
-            else if ((revents & POLLIN) && !acceptClients())
+            else if ((pollFds[index].revents & POLLIN) && !acceptClients())
                 _signal.requestStop();
         }
-        else
-            handleClient(fd, revents);
+        else        // otherwise, all are general clients
+            handleClient(pollFds[index].fd, pollFds[index].revents);
+
+        ++index;
     }
 }
 
