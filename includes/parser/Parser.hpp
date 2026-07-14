@@ -4,7 +4,7 @@
 # include <string>
 # include <vector>
 
-// split one IRC line into command, parameter, trailing text
+
 class Parser
 {
 public:

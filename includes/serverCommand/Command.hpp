@@ -19,7 +19,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// route parsed IRC message to command implementation
+
 class Command
 {
 public:

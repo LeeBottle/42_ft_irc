@@ -4,7 +4,7 @@
 class ChannelManager;
 class ClientManager;
 
-// non-blocking receive, send, removal operation
+
 class ClientIO
 {
 public:

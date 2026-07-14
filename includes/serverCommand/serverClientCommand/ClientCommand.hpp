@@ -7,7 +7,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle registration and client-level IRC command
+
 class ClientCommand
 {
 public:

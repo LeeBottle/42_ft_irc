@@ -20,7 +20,6 @@ Kick::~Kick()
 }
 
 
-// validate and execute this IRC command
 bool    Kick::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();

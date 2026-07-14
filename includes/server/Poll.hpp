@@ -7,14 +7,14 @@
 class ClientManager;
 class Listener;
 
-// Builds the single poll descriptor list used by the server.
+
 class Poll
 {
 public:
     Poll();
     ~Poll();
 
-    void    build(std::vector<struct pollfd> &, Listener &, 
+    void    build(std::vector<struct pollfd> &, Listener &,
                 ClientManager &) const;
 
 private:

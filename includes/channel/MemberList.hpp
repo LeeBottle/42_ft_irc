@@ -6,7 +6,7 @@
 
 class Client;
 
-// track client that currently belong to a channel
+
 class MemberList
 {
 public:

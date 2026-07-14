@@ -9,7 +9,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle JOIN command
+
 class Join
 {
 public:

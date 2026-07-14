@@ -7,7 +7,7 @@
 class Channel;
 class Client;
 
-// own channel and coordinate channel lookup and removal
+
 class ChannelManager
 {
 public:

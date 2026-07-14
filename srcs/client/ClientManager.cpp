@@ -2,20 +2,17 @@
 #include "client/Client.hpp"
 
 
-// Initializes this object with the supplied state.
 ClientManager::ClientManager() : _clients()
 {
 }
 
 
-// Destroys this object and releases its owned resources.
 ClientManager::~ClientManager()
 {
     clear();
 }
 
 
-// Adds an item to this collection.
 Client  *ClientManager::add(int clientFd)
 {
     Client  *client;
@@ -27,7 +24,6 @@ Client  *ClientManager::add(int clientFd)
 }
 
 
-// Finds a client by its file descriptor.
 Client  *ClientManager::findByFd(int clientFd)
 {
     std::vector<Client *>::iterator it;
@@ -37,6 +33,7 @@ Client  *ClientManager::findByFd(int clientFd)
     {
         if ((*it)->fd() == clientFd)
             return (*it);
+
         ++it;
     }
 
@@ -44,7 +41,6 @@ Client  *ClientManager::findByFd(int clientFd)
 }
 
 
-// Finds a client by its nickname.
 Client  *ClientManager::findByNickname(const std::string &nickname)
 {
     std::vector<Client *>::iterator it;
@@ -54,6 +50,7 @@ Client  *ClientManager::findByNickname(const std::string &nickname)
     {
         if ((*it)->nickname() == nickname)
             return (*it);
+
         ++it;
     }
 
@@ -61,14 +58,12 @@ Client  *ClientManager::findByNickname(const std::string &nickname)
 }
 
 
-// Performs the clients operation.
 const std::vector<Client *> &ClientManager::clients() const
 {
     return (_clients);
 }
 
 
-// Removes and destroys a client identified by its file descriptor.
 void    ClientManager::removeByFd(int clientFd)
 {
     std::vector<Client *>::iterator it;
@@ -87,7 +82,6 @@ void    ClientManager::removeByFd(int clientFd)
 }
 
 
-// Removes all stored data.
 void    ClientManager::clear()
 {
     std::vector<Client *>::iterator it;
@@ -102,7 +96,6 @@ void    ClientManager::clear()
 }
 
 
-// Reports whether nickname in use.
 bool    ClientManager::isNicknameInUse(const std::string &nickname,
     Client &owner) const
 {
@@ -113,6 +106,7 @@ bool    ClientManager::isNicknameInUse(const std::string &nickname,
     {
         if (*it != &owner && (*it)->nickname() == nickname)
             return (true);
+
         ++it;
     }
 

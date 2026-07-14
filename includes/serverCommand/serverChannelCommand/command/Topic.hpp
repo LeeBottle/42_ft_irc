@@ -8,7 +8,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle viewing, setting, clearing channel topic
+
 class Topic
 {
 public:

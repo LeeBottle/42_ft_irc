@@ -18,6 +18,7 @@ bool    commandValidChannel(const std::string &name)
         if (name[index] == ' ' || name[index] == ',' || name[index] == '\r'
             || name[index] == '\n' || name[index] == '\0')
             return (false);
+
         ++index;
     }
 
@@ -78,12 +79,12 @@ void    commandToOthers(Channel &channel, Client &sender,
     {
         if (*it != &sender)
             (*it)->queueSendData(message);
+
         ++it;
     }
 }
 
 
-// Performs the command target operation.
 std::string commandTarget(Client &client)
 {
     if (client.hasNickname())
@@ -93,7 +94,6 @@ std::string commandTarget(Client &client)
 }
 
 
-// Performs the command member names operation.
 std::string commandMemberNames(Channel &channel)
 {
     std::vector<Client *>::const_iterator   it;

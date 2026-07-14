@@ -8,7 +8,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle WHO command and reply
+
 class Who
 {
 public:

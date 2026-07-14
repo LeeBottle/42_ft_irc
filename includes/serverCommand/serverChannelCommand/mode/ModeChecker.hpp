@@ -9,7 +9,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// validate permission and argument for mode change
+
 class ModeChecker
 {
 public:

@@ -10,7 +10,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// parse mode flag and their required parameter
+
 class ModeParser
 {
 public:

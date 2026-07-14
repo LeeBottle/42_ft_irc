@@ -1,7 +1,8 @@
 #include "channel/ModeState.hpp"
 
+#include <sstream>
 
-// Initializes this object with the supplied state.
+
 ModeState::ModeState()
     : _topic(),
       _inviteOnly(false),
@@ -14,20 +15,17 @@ ModeState::ModeState()
 }
 
 
-// Destroys this object and releases its owned resources.
 ModeState::~ModeState()
 {
 }
 
 
-// Performs the topic operation.
 const std::string   &ModeState::topic() const
 {
     return (_topic);
 }
 
 
-// Performs the mode string operation.
 std::string ModeState::modeString() const
 {
     std::string modes;
@@ -53,89 +51,62 @@ std::string ModeState::modeString() const
 }
 
 
-// Performs the mode parameters operation.
 std::string ModeState::modeParameters() const
 {
-    std::string params;
-    size_t      value;
-    char        digits[32];
-    size_t      index;
+    std::ostringstream stream;
 
     if (_hasKey)
-        params += " " + _key;
+        stream << " " << _key;
 
     if (_hasLimit)
-    {
-        value = _limit;
-        index = sizeof(digits);
-        digits[--index] = '\0';
+        stream << " " << _limit;
 
-        if (value == 0)
-            digits[--index] = '0';
-
-        while (value > 0)
-        {
-            digits[--index] = static_cast<char>('0' + (value % 10));
-            value /= 10;
-        }
-        params += " ";
-        params += &digits[index];
-    }
-
-    return (params);
+    return (stream.str());
 }
 
 
-// Performs the invite only operation.
 bool    ModeState::inviteOnly() const
 {
     return (_inviteOnly);
 }
 
 
-// Performs the topic restricted operation.
 bool    ModeState::topicRestricted() const
 {
     return (_topicRestricted);
 }
 
 
-// Reports whether s key.
 bool    ModeState::hasKey() const
 {
     return (_hasKey);
 }
 
 
-// Performs the key operation.
 const std::string   &ModeState::key() const
 {
     return (_key);
 }
 
 
-// Reports whether s limit.
 bool    ModeState::hasLimit() const
 {
     return (_hasLimit);
 }
 
 
-// Performs the limit operation.
 size_t  ModeState::limit() const
 {
     return (_limit);
 }
 
 
-// Updates topic.
 void    ModeState::setTopic(const std::string &topic)
 {
     _topic = topic;
 }
 
 
-// Updates invite only.
 bool    ModeState::setInviteOnly(bool value)
 {
     if (_inviteOnly == value)
@@ -147,7 +118,6 @@ bool    ModeState::setInviteOnly(bool value)
 }
 
 
-// Updates topic restricted.
 bool    ModeState::setTopicRestricted(bool value)
 {
     if (_topicRestricted == value)
@@ -159,7 +129,6 @@ bool    ModeState::setTopicRestricted(bool value)
 }
 
 
-// Updates key.
 void    ModeState::setKey(const std::string &key)
 {
     _hasKey = true;
@@ -167,7 +136,6 @@ void    ModeState::setKey(const std::string &key)
 }
 
 
-// Performs the clear key operation.
 bool    ModeState::clearKey()
 {
     if (!_hasKey)
@@ -180,7 +148,6 @@ bool    ModeState::clearKey()
 }
 
 
-// Updates limit.
 void    ModeState::setLimit(size_t limit)
 {
     _hasLimit = true;
@@ -188,7 +155,6 @@ void    ModeState::setLimit(size_t limit)
 }
 
 
-// Performs the clear limit operation.
 bool    ModeState::clearLimit()
 {
     if (!_hasLimit)

@@ -20,7 +20,6 @@ Listener::~Listener()
 }
 
 
-// set up listenig socket
 bool    Listener::setup()
 {
     if (!createSocket())
@@ -42,7 +41,6 @@ bool    Listener::setup()
 }
 
 
-// create listening socket fd
 bool    Listener::createSocket()
 {
     _listenFd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -53,7 +51,6 @@ bool    Listener::createSocket()
 }
 
 
-// set listening socket option
 bool    Listener::setSocketOption()
 {
     int option;
@@ -67,7 +64,6 @@ bool    Listener::setSocketOption()
 }
 
 
-// set listening socket fd as a non blocking
 bool    Listener::setNonBlocking(int fd)
 {
     if (::fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
@@ -77,7 +73,6 @@ bool    Listener::setNonBlocking(int fd)
 }
 
 
-// allocate IP and port to listening socket
 bool    Listener::bindSocket()
 {
     struct sockaddr_in address;
@@ -95,7 +90,6 @@ bool    Listener::bindSocket()
 }
 
 
-// Successful listen() move the socket to passive mode and enable queue
 bool    Listener::listenSocket()
 {
     if (::listen(_listenFd, SOMAXCONN) == -1)
@@ -106,10 +100,9 @@ bool    Listener::listenSocket()
 }
 
 
-// accept one pending connection and configure its client socket
 bool    Listener::acceptClient(int &clientFd)
 {
-    clientFd = ::accept(_listenFd, NULL, NULL);
+    clientFd = ::accept(_listenFd, NULL, NULL); // allocate fd to new client
     if (clientFd == -1)
     {
         if (errno == EINTR)  // interrupted by a signal
@@ -127,7 +120,7 @@ bool    Listener::acceptClient(int &clientFd)
         return (reportSystemError("accept"));
     }
 
-    if (!setNonBlocking(clientFd))
+    if (!setNonBlocking(clientFd))  // set new client as a non-blocking
     {
         ::close(clientFd);
         clientFd = -1;
@@ -138,7 +131,6 @@ bool    Listener::acceptClient(int &clientFd)
 }
 
 
-// get listenFd
 int Listener::listenFd() const
 {
     return (_listenFd);

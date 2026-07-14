@@ -13,7 +13,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handleh IRC channel and user mode command
+
 class Mode
 {
 public:

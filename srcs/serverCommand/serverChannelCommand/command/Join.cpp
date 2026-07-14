@@ -19,7 +19,6 @@ Join::~Join()
 }
 
 
-// validate and execute this IRC command
 bool    Join::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -79,7 +78,6 @@ bool    Join::handle(Client &client, const Parser &message)
 }
 
 
-// check permission
 Join::JoinResult    Join::checkPermission(Channel &channel, Client &client,
     const std::string &key) const
 {
@@ -102,7 +100,6 @@ Join::JoinResult    Join::checkPermission(Channel &channel, Client &client,
 }
 
 
-// Performs the join operation.
 void    Join::join(Channel &channel, Client &client) const
 {
     if (channel.members().has(&client))

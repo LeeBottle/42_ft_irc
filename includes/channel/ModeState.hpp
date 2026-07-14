@@ -4,7 +4,7 @@
 # include <cstddef>
 # include <string>
 
-// store the configurable mode values of a channel
+
 class ModeState
 {
 public:

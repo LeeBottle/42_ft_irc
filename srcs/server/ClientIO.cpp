@@ -9,7 +9,6 @@
 
 
 #ifdef DEBUG_RECV
-// Performs the print raw byte operation.
 static void printRawByte(unsigned char byte)
 {
     if (byte == '\r')
@@ -20,7 +19,6 @@ static void printRawByte(unsigned char byte)
         std::cout << byte;
 }
 
-// Performs the print raw log operation.
 static void printRawLog(int clientFd, char *buffer, ssize_t bytesRead)
 {
     ssize_t index;
@@ -48,7 +46,6 @@ ClientIO::~ClientIO()
 }
 
 
-// receive available byte from one client into its receive buffer
 bool    ClientIO::receive(ClientManager &clients, ChannelManager &channels,
     int clientFd)
 {
@@ -88,7 +85,6 @@ bool    ClientIO::receive(ClientManager &clients, ChannelManager &channels,
 }
 
 
-// send pending byte from one client send buffer
 void    ClientIO::send(ClientManager &clients, ChannelManager &channels,
     int clientFd)
 {
@@ -119,7 +115,6 @@ void    ClientIO::send(ClientManager &clients, ChannelManager &channels,
 }
 
 
-// removes disconnected client from channel and client storage
 void    ClientIO::remove(ClientManager &clients, ChannelManager &channels,
     int clientFd)
 {

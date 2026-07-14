@@ -10,7 +10,7 @@
 
 class Client;
 
-// store one IRC channel, its member, topic, mode state
+
 class Channel
 {
 public:

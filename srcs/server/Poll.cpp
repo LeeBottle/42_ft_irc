@@ -16,7 +16,6 @@ Poll::~Poll()
 }
 
 
-// register fd to pollFds
 void    Poll::build(std::vector<struct pollfd> &pollFds, Listener &listener,
     ClientManager &clients) const
 {
@@ -31,7 +30,7 @@ void    Poll::appendTerminal(std::vector<struct pollfd> &pollFds) const
 {
     struct pollfd pollFd;
 
-    if (!isatty(STDIN_FILENO))  // allowed only terminal
+    if (!isatty(STDIN_FILENO))  // allowed only input from server terminal
         return ;
 
     pollFd.fd = STDIN_FILENO;

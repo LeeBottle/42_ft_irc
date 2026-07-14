@@ -8,7 +8,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle NAMES command and reply
+
 class Names
 {
 public:

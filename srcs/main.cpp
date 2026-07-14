@@ -6,7 +6,6 @@
 #include <string>
 
 
-// convert port type from string to integer
 static int  convertPort(const std::string &strPort)
 {
     int     port;
@@ -36,7 +35,6 @@ static int  convertPort(const std::string &strPort)
 }
 
 
-// check whether valid password
 static bool isValidPassword(const std::string &password)
 {
     if (password.empty() || password.size() > 504)

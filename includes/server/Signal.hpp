@@ -1,7 +1,7 @@
 #ifndef SIGNAL_HPP
 # define SIGNAL_HPP
 
-// install signal handler and store shutdown request state
+
 class Signal
 {
 public:

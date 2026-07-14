@@ -6,6 +6,7 @@
 class Channel;
 class Client;
 
+
 bool    commandValidChannel(const std::string &name);
 void    commandReply(Client &client, const std::string &message);
 void    commandNamesReply(Client &client, Channel &channel);

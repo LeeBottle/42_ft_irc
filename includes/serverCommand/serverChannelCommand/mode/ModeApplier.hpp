@@ -5,7 +5,7 @@
 
 class Channel;
 
-// apply validated channel mode change
+
 class ModeApplier
 {
 public:

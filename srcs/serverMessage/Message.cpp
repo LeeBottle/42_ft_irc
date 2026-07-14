@@ -20,7 +20,6 @@ Message::~Message()
 }
 
 
-// Validates and executes this IRC command.
 bool    Message::handle(Client &client, const std::string &line)
 {
     Parser  parser;
@@ -32,7 +31,6 @@ bool    Message::handle(Client &client, const std::string &line)
 }
 
 
-// process complete IRC message currently buffered for a client
 bool    Message::process(Client &client)
 {
     std::string line;

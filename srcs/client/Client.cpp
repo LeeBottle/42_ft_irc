@@ -3,7 +3,6 @@
 #include <unistd.h>
 
 
-// Initializes this object with the supplied state.
 Client::Client(int fd)
     : _fd(fd),
       _hasPassword(false),
@@ -17,7 +16,6 @@ Client::Client(int fd)
 }
 
 
-// Destroys this object and releases its owned resources.
 Client::~Client()
 {
     if (_fd != -1)
@@ -28,35 +26,30 @@ Client::~Client()
 }
 
 
-// Returns the owned socket file descriptor.
 int Client::fd() const
 {
     return (_fd);
 }
 
 
-// Returns the client nickname.
 const std::string   &Client::nickname() const
 {
     return (_nickname);
 }
 
 
-// Returns the client username.
 const std::string   &Client::username() const
 {
     return (_username);
 }
 
 
-// Returns the client real name.
 const std::string   &Client::realname() const
 {
     return (_realname);
 }
 
 
-// Builds the IRC prefix for this client.
 std::string Client::prefix() const
 {
     if (_nickname.empty())
@@ -69,35 +62,30 @@ std::string Client::prefix() const
 }
 
 
-// Reports whether the password was accepted.
 bool    Client::hasPassword() const
 {
     return (_hasPassword);
 }
 
 
-// Reports whether the client has a nickname.
 bool    Client::hasNickname() const
 {
     return (!_nickname.empty());
 }
 
 
-// Reports whether USER information was received.
 bool    Client::hasUser() const
 {
     return (!_username.empty());
 }
 
 
-// Reports whether the IRC registration sequence is complete.
 bool    Client::isRegistered() const
 {
     return (_registered);
 }
 
 
-// Marks the client password as accepted.
 void    Client::acceptPassword()
 {
     _hasPassword = true;
@@ -105,7 +93,6 @@ void    Client::acceptPassword()
 }
 
 
-// Stores the client nickname.
 void    Client::setNickname(const std::string &nickname)
 {
     _nickname = nickname;
@@ -113,7 +100,6 @@ void    Client::setNickname(const std::string &nickname)
 }
 
 
-// Stores the client username and real name.
 void    Client::setUser(const std::string &username,
     const std::string &realname)
 {
@@ -165,7 +151,6 @@ void    Client::removeSentData(size_t length)
 }
 
 
-// Updates registration after PASS, NICK, and USER state changes.
 void    Client::updateRegistration()
 {
     if (_hasPassword && hasNickname() && hasUser())

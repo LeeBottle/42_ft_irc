@@ -4,7 +4,7 @@
 # include <cstddef>
 # include <string>
 
-// store byte waiting to be sent to a client socket
+
 class SendBuffer
 {
 public:
@@ -20,9 +20,7 @@ public:
 private:
     std::string _buffer;
 
-    // Initializes this object with the supplied state.
     SendBuffer(const SendBuffer &);
-    // Performs the &operator= operation.
     SendBuffer &operator=(const SendBuffer &);
 };
 

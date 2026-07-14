@@ -7,7 +7,6 @@
 #include <vector>
 
 
-// Initializes this object with the supplied state.
 Who::Who(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {
@@ -15,13 +14,11 @@ Who::Who(ClientManager &clients, ChannelManager &channels)
 }
 
 
-// Destroys this object and releases its owned resources.
 Who::~Who()
 {
 }
 
 
-// Validates and executes this IRC command.
 bool    Who::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>          &params = message.params();

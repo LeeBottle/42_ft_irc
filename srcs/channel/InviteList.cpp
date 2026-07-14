@@ -3,19 +3,16 @@
 #include <cstddef>
 
 
-// Initializes this object with the supplied state.
 InviteList::InviteList() : _invites()
 {
 }
 
 
-// Destroys this object and releases its owned resources.
 InviteList::~InviteList()
 {
 }
 
 
-// Reports whether s.
 bool    InviteList::has(Client *client) const
 {
     std::vector<Client *>::const_iterator   it;
@@ -32,7 +29,6 @@ bool    InviteList::has(Client *client) const
 }
 
 
-// Adds an item to this collection.
 void    InviteList::add(Client *client)
 {
     if (client != NULL && !has(client))
@@ -40,7 +36,6 @@ void    InviteList::add(Client *client)
 }
 
 
-// Removes a disconnected client from channels and client storage.
 void    InviteList::remove(Client *client)
 {
     std::vector<Client *>::iterator it;

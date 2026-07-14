@@ -19,7 +19,6 @@ Part::~Part()
 }
 
 
-// validate and execute this IRC command
 bool    Part::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();

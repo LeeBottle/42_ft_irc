@@ -7,7 +7,6 @@
 #include <vector>
 
 
-// Initializes this object with the supplied state.
 ModeChecker::ModeChecker(ClientManager &clients, ChannelManager &channels)
     : _channels(channels)
 {
@@ -15,13 +14,11 @@ ModeChecker::ModeChecker(ClientManager &clients, ChannelManager &channels)
 }
 
 
-// Destroys this object and releases its owned resources.
 ModeChecker::~ModeChecker()
 {
 }
 
 
-// Performs the prepare operation.
 bool    ModeChecker::prepare(Client &client, const Parser &message,
     Channel *&channel)
 {
@@ -57,7 +54,6 @@ bool    ModeChecker::prepare(Client &client, const Parser &message,
 }
 
 
-// Performs the user operation.
 bool    ModeChecker::user(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -81,7 +77,6 @@ bool    ModeChecker::user(Client &client, const Parser &message)
 }
 
 
-// Performs the ban list operation.
 bool    ModeChecker::banList(Client &client, const Parser &message,
     Channel *&channel)
 {
@@ -98,6 +93,7 @@ bool    ModeChecker::banList(Client &client, const Parser &message,
         if (modeString[index] != '+' && modeString[index] != '-'
             && modeString[index] != 'b')
             return (false);
+
         ++index;
     }
 

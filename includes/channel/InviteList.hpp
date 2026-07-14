@@ -5,7 +5,7 @@
 
 class Client;
 
-// track client invited to an invite-only channel
+
 class InviteList
 {
 public:

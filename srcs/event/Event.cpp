@@ -15,7 +15,6 @@ Event::~Event()
 }
 
 
-// wait until a monitored fd become ready
 bool    Event::wait(std::vector<struct pollfd> &pollFds)
 {
     int pollResult;

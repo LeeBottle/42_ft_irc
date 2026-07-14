@@ -8,7 +8,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle INVITE command
+
 class Invite
 {
 public:

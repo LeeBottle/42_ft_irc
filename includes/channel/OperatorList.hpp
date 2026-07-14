@@ -5,7 +5,7 @@
 
 class Client;
 
-// track channel member with operator privilege
+
 class OperatorList
 {
 public:

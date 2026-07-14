@@ -7,7 +7,7 @@
 # include "client/ReceiveBuffer.hpp"
 # include "client/SendBuffer.hpp"
 
-// store one connected IRC client and its protocol state
+
 class Client
 {
 public:

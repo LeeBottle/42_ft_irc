@@ -7,7 +7,7 @@
 
 class Client;
 
-// define ModeOperation component and its interface
+
 struct ModeOperation
 {
     char        sign;

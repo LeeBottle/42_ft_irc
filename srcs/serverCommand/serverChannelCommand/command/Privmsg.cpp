@@ -19,7 +19,6 @@ Privmsg::~Privmsg()
 }
 
 
-// validate and execute this IRC command
 bool    Privmsg::handle(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -51,7 +50,6 @@ bool    Privmsg::handle(Client &client, const Parser &message)
 }
 
 
-// send to channel operation
 void    Privmsg::sendToChannel(Client &client, const std::string &target,
     const std::string &text)
 {

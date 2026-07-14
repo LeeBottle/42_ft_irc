@@ -26,7 +26,6 @@ Server::~Server()
 }
 
 
-// start the server event loop until shutdown is requested
 bool    Server::run()
 {
     std::vector<struct pollfd>  pollFds;
@@ -53,7 +52,6 @@ bool    Server::run()
 }
 
 
-// routes poll events to terminal, listener, client handlers
 void    Server::handlePoll(std::vector<struct pollfd> pollFds)
 {
     size_t index;
@@ -92,7 +90,6 @@ void    Server::handlePoll(std::vector<struct pollfd> pollFds)
 }
 
 
-// processe read, write, hang-up, and error event for one client
 void    Server::handleClient(int clientFd, short revents)
 {
     Client  *client;
@@ -126,7 +123,6 @@ void    Server::handleClient(int clientFd, short revents)
     client = _clients.findByFd(clientFd);
     if (shouldProcess && client != NULL && !_message.process(*client))
     {
-        _clientIO.send(_clients, _channels, clientFd);
         _clientIO.remove(_clients, _channels, clientFd);
         return ;
     }
@@ -141,7 +137,6 @@ void    Server::handleClient(int clientFd, short revents)
 }
 
 
-// Processes a command read from standard input.
 void    Server::handleTerminal()
 {
     std::string line;
@@ -154,7 +149,6 @@ void    Server::handleTerminal()
 }
 
 
-// accept one pending client connection without blocking
 bool    Server::acceptClients()
 {
     int clientFd;

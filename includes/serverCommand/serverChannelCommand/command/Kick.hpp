@@ -8,7 +8,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle KICK command
+
 class Kick
 {
 public:

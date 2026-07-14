@@ -1,7 +1,7 @@
 #ifndef LISTENER_HPP
 # define LISTENER_HPP
 
-// listening socket
+
 class Listener
 {
 public:

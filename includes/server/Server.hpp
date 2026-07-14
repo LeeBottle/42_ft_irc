@@ -14,7 +14,7 @@
 # include "server/Signal.hpp"
 # include "serverMessage/Message.hpp"
 
-// coordinate listener, poll loop, client, channel, command
+
 class Server
 {
 public:

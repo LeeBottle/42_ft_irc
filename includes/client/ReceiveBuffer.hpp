@@ -4,7 +4,7 @@
 # include <cstddef>
 # include <string>
 
-// accumulate received byte and extract complete IRC command line
+
 class ReceiveBuffer
 {
 public:
@@ -18,9 +18,7 @@ public:
 private:
     std::string _buffer;
 
-    // Initializes this object with the supplied state.
     ReceiveBuffer(const ReceiveBuffer &);
-    // Performs the &operator= operation.
     ReceiveBuffer &operator=(const ReceiveBuffer &);
 };
 

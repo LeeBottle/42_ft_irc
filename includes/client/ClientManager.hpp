@@ -6,7 +6,7 @@
 
 class Client;
 
-// own connected client and provide client lookup operations
+
 class ClientManager
 {
 public:

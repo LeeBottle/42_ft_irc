@@ -6,21 +6,19 @@
 #include <vector>
 
 
-// Initializes this object with the supplied state.
 ClientCommand::ClientCommand(const std::string &password,
     ClientManager &clients)
-    : _password(password), _clients(clients)
+    : _password(password),
+      _clients(clients)
 {
 }
 
 
-// Destroys this object and releases its owned resources.
 ClientCommand::~ClientCommand()
 {
 }
 
 
-// Performs the pass operation.
 bool    ClientCommand::pass(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -35,7 +33,7 @@ bool    ClientCommand::pass(Client &client, const Parser &message)
         return (true);
     }
 
-    if (params.empty())
+    if (params.empty())     // empty password
     {
         reply(client, ":ircserv 461 " + target(client)
             + " PASS :Not enough parameters\r\n");
@@ -43,7 +41,7 @@ bool    ClientCommand::pass(Client &client, const Parser &message)
         return (true);
     }
 
-    if (params[0] != _password)
+    if (params[0] != _password)     // wrong password
     {
         reply(client, ":ircserv 464 " + target(client)
             + " :Password incorrect\r\n");
@@ -58,7 +56,6 @@ bool    ClientCommand::pass(Client &client, const Parser &message)
 }
 
 
-// Performs the nick operation.
 bool    ClientCommand::nick(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -89,7 +86,6 @@ bool    ClientCommand::nick(Client &client, const Parser &message)
 }
 
 
-// Performs the user operation.
 bool    ClientCommand::user(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -105,7 +101,7 @@ bool    ClientCommand::user(Client &client, const Parser &message)
         return (true);
     }
 
-    if (params.size() < 4)
+    if (params.size() < 4)  // USER <username> <mode> <unused> <realname>
     {
         reply(client, ":ircserv 461 " + target(client)
             + " USER :Not enough parameters\r\n");
@@ -120,7 +116,6 @@ bool    ClientCommand::user(Client &client, const Parser &message)
 }
 
 
-// Performs the cap operation.
 bool    ClientCommand::cap(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -132,7 +127,6 @@ bool    ClientCommand::cap(Client &client, const Parser &message)
 }
 
 
-// Performs the ping operation.
 bool    ClientCommand::ping(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -151,7 +145,6 @@ bool    ClientCommand::ping(Client &client, const Parser &message)
 }
 
 
-// Performs the pong operation.
 bool    ClientCommand::pong(Client &client, const Parser &message)
 {
     (void)client;
@@ -161,17 +154,15 @@ bool    ClientCommand::pong(Client &client, const Parser &message)
 }
 
 
-// Performs the quit operation.
 bool    ClientCommand::quit(Client &client, const Parser &message)
 {
+    (void)client;
     (void)message;
-    reply(client, ":ircserv ERROR :Closing Link\r\n");
 
     return (false);
 }
 
 
-// Performs the privmsg operation.
 bool    ClientCommand::privmsg(Client &client, const Parser &message)
 {
     const std::vector<std::string>  &params = message.params();
@@ -214,7 +205,6 @@ bool    ClientCommand::privmsg(Client &client, const Parser &message)
 }
 
 
-// Performs the unknown operation.
 bool    ClientCommand::unknown(Client &client, const Parser &message)
 {
     reply(client, ":ircserv 421 " + target(client)
@@ -224,14 +214,12 @@ bool    ClientCommand::unknown(Client &client, const Parser &message)
 }
 
 
-// Queues an IRC reply for a client.
 void    ClientCommand::reply(Client &client, const std::string &message) const
 {
     client.queueSendData(message);
 }
 
 
-// Returns the nickname used as the reply target.
 const std::string   &ClientCommand::target(Client &client) const
 {
     static const std::string unknownTarget = "*";
@@ -243,7 +231,6 @@ const std::string   &ClientCommand::target(Client &client) const
 }
 
 
-// Performs the send registration if ready operation.
 void    ClientCommand::sendRegistrationIfReady(Client &client,
     bool wasRegistered)
 {
@@ -253,6 +240,5 @@ void    ClientCommand::sendRegistrationIfReady(Client &client,
     reply(client, ":ircserv 001 " + client.nickname()
         + " :Welcome to ircserv\r\n");
 
-    reply(client, ":ircserv 221 " + client.nickname()
-        + " +i\r\n");
+    reply(client, ":ircserv 221 " + client.nickname() + " +i\r\n");
 }

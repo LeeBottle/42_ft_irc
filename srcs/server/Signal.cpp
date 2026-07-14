@@ -26,7 +26,6 @@ Signal::~Signal()
 }
 
 
-// set up signal
 bool    Signal::setup()
 {
     struct sigaction action;
@@ -58,14 +57,12 @@ bool    Signal::setup()
 }
 
 
-// check whether shutdown has been requested
 bool    Signal::shouldStop() const
 {
     return (g_serverStopRequested != 0);
 }
 
 
-// used command DIE except other signal handler
 void    Signal::requestStop()
 {
     g_serverStopRequested = 1;

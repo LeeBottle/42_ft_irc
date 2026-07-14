@@ -8,7 +8,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// handle private and channel IRC message
+
 class Privmsg
 {
 public:

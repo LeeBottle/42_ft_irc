@@ -5,7 +5,6 @@
 #include <vector>
 
 
-// Initializes this object with the supplied state.
 Command::Command(const std::string &password, ClientManager &clients,
     ChannelManager &channels)
     : _client(password, clients),
@@ -22,13 +21,11 @@ Command::Command(const std::string &password, ClientManager &clients,
 }
 
 
-// Destroys this object and releases its owned resources.
 Command::~Command()
 {
 }
 
 
-// Executes this IRC command for the given client.
 bool    Command::execute(Client &client, const Parser &message)
 {
     switch (message.type())

@@ -10,7 +10,7 @@ class Client;
 class ClientManager;
 class Parser;
 
-// extract complete line, invoke the parser, dispatch command
+
 class Message
 {
 public:

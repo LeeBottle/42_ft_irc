@@ -2,20 +2,17 @@
 #include "channel/Channel.hpp"
 
 
-// Initializes this object with the supplied state.
 ChannelManager::ChannelManager() : _channels()
 {
 }
 
 
-// Destroys this object and releases its owned resources.
 ChannelManager::~ChannelManager()
 {
     clear();
 }
 
 
-// Finds an existing channel or creates it when missing.
 Channel *ChannelManager::findOrCreate(const std::string &name)
 {
     Channel *found;
@@ -32,7 +29,6 @@ Channel *ChannelManager::findOrCreate(const std::string &name)
 }
 
 
-// Removes a client from every channel it joined.
 void    ChannelManager::removeClientFromAll(Client *client)
 {
     std::vector<Channel *>::iterator    it;
@@ -57,7 +53,6 @@ void    ChannelManager::removeClientFromAll(Client *client)
 }
 
 
-// Finds a matching stored item.
 Channel *ChannelManager::find(const std::string &name)
 {
     std::vector<Channel *>::iterator    it;
@@ -74,7 +69,6 @@ Channel *ChannelManager::find(const std::string &name)
 }
 
 
-// Removes empty.
 void    ChannelManager::removeEmpty(Channel *channel)
 {
     std::vector<Channel *>::iterator    it;
@@ -96,7 +90,6 @@ void    ChannelManager::removeEmpty(Channel *channel)
 }
 
 
-// Removes all stored data.
 void    ChannelManager::clear()
 {
     std::vector<Channel *>::iterator    it;

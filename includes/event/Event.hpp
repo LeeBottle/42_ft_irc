@@ -4,7 +4,7 @@
 # include <poll.h>
 # include <vector>
 
-// wait for event on non-blocking fd using poll
+
 class Event
 {
 public:
