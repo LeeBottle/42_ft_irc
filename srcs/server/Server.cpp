@@ -31,17 +31,17 @@ bool    Server::run()
 {
     std::vector<struct pollfd>  pollFds;
 
-    if (!_signal.setup())
+    if (!_signal.setup())       // set up Signal module
         return (false);
 
-    if (!_listener.setup())
+    if (!_listener.setup())     // set up Listener module
         return (false);
 
     while (!_signal.shouldStop())
     {
         _poll.build(pollFds, _listener, _clients);  // add fd to monitor
 
-        if (!_event.wait(pollFds))
+        if (!_event.wait(pollFds))  // Server wait until event cause
             return (false);
 
         handlePoll(pollFds);
@@ -53,7 +53,7 @@ bool    Server::run()
 }
 
 
-// routes poll events to terminal, listener, or client handlers
+// routes poll events to terminal, listener, client handlers
 void    Server::handlePoll(std::vector<struct pollfd> pollFds)
 {
     size_t index;
@@ -69,10 +69,12 @@ void    Server::handlePoll(std::vector<struct pollfd> pollFds)
 
         if (pollFds[index].fd == STDIN_FILENO)      // command DIE
         {
-            if (pollFds[index].revents & POLLIN)
+            if (pollFds[index].revents & (POLLERR | POLLHUP | POLLNVAL))
+                _signal.shouldStop();
+            else if (pollFds[index].revents & POLLIN)
                 handleTerminal();
         }
-        else if (pollFds[index].fd == _listener.listenFd())  // listening socket
+        else if (pollFds[index].fd == _listener.listenFd())  // listener
         {
             if (pollFds[index].revents & (POLLERR | POLLHUP | POLLNVAL))
             {
@@ -90,21 +92,21 @@ void    Server::handlePoll(std::vector<struct pollfd> pollFds)
 }
 
 
-// Processes read, write, hang-up, and error events for one client.
+// processe read, write, hang-up, and error event for one client
 void    Server::handleClient(int clientFd, short revents)
 {
     Client  *client;
-    bool    hasReceiveData;
+    bool    shouldProcess;
 
-    hasReceiveData = false;
+    shouldProcess = false;
 
-    if (revents & (POLLERR | POLLNVAL))
+    if (revents & (POLLNVAL))   // invalid socket
     {
         _clientIO.remove(_clients, _channels, clientFd);
         return ;
     }
 
-    if ((revents & POLLHUP) && !(revents & POLLIN))
+    if ((revents & (POLLERR | POLLHUP)) && !(revents & POLLIN))
     {
         _clientIO.remove(_clients, _channels, clientFd);
         return ;
@@ -118,7 +120,15 @@ void    Server::handleClient(int clientFd, short revents)
         if (_signal.shouldStop())
             return ;
 
-        hasReceiveData = true;
+        shouldProcess = true;
+    }
+
+    client = _clients.findByFd(clientFd);
+    if (shouldProcess && client != NULL && !_message.process(*client))
+    {
+        _clientIO.send(_clients, _channels, clientFd);
+        _clientIO.remove(_clients, _channels, clientFd);
+        return ;
     }
 
     if (revents & POLLOUT)
@@ -127,13 +137,6 @@ void    Server::handleClient(int clientFd, short revents)
 
         if (_signal.shouldStop())
             return ;
-    }
-
-    client = _clients.findByFd(clientFd);
-    if (hasReceiveData && client != NULL && !_message.process(*client))
-    {
-        _clientIO.send(_clients, _channels, clientFd);
-        _clientIO.remove(_clients, _channels, clientFd);
     }
 }
 
@@ -151,7 +154,7 @@ void    Server::handleTerminal()
 }
 
 
-// Accepts one pending client connection without blocking.
+// accept one pending client connection without blocking
 bool    Server::acceptClients()
 {
     int clientFd;

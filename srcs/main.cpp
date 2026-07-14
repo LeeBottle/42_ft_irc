@@ -77,9 +77,9 @@ int main(int argc, char **argv)
         return (EXIT_FAILURE);
     }
 
-    Server server(port, password);
+    Server server(port, password);      // create Server object
 
-    if (!server.run())
+    if (!server.run())      // start Server
         return (EXIT_FAILURE);
 
     return (EXIT_SUCCESS);

@@ -25,12 +25,12 @@ Message::~Message()
 // Validates and executes this IRC command.
 bool    Message::handle(Client &client, const std::string &line)
 {
-    Parser  message;
+    Parser  parser;
 
-    if (!message.parse(line))
+    if (!parser.parse(line))
         return (true);
 
-    return (_command.execute(client, message));
+    return (_command.execute(client, parser));
 }
 
 
