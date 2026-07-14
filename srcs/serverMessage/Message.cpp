@@ -37,7 +37,7 @@ bool    Message::process(Client &client)
 {
     std::string line;
 
-    while (client.receiveBuffer().pop(line))
+    while (client.popReceivedLine(line))
     {
 
 #ifdef DEBUG_RECV

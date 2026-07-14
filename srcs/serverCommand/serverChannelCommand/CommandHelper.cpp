@@ -27,7 +27,7 @@ bool    commandValidChannel(const std::string &name)
 
 void    commandReply(Client &client, const std::string &message)
 {
-    client.sendBuffer().append(message);
+    client.queueSendData(message);
 }
 
 
@@ -61,7 +61,7 @@ void    commandToAll(Channel &channel, const std::string &message)
     it = members.begin();
     while (it != members.end())
     {
-        (*it)->sendBuffer().append(message);
+        (*it)->queueSendData(message);
         ++it;
     }
 }
@@ -77,7 +77,7 @@ void    commandToOthers(Channel &channel, Client &sender,
     while (it != members.end())
     {
         if (*it != &sender)
-            (*it)->sendBuffer().append(message);
+            (*it)->queueSendData(message);
         ++it;
     }
 }

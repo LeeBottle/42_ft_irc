@@ -59,7 +59,7 @@ bool    Invite::handle(Client &client, const Parser &message)
             commandReply(client, ":ircserv 341 " + commandTarget(client)
                 + " " + targetClient->nickname() + " " + params[1]
                 + "\r\n");
-            targetClient->sendBuffer().append(":" + client.prefix()
+            targetClient->queueSendData(":" + client.prefix()
                 + " INVITE " + targetClient->nickname() + " :"
                 + params[1] + "\r\n");
         }

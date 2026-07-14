@@ -206,7 +206,7 @@ bool    ClientCommand::privmsg(Client &client, const Parser &message)
         reply(client, ":ircserv 401 " + target(client)
             + " " + params[0] + " :No such nick/channel\r\n");
     else
-        targetClient->sendBuffer().append(":" + client.prefix()
+        targetClient->queueSendData(":" + client.prefix()
             + " PRIVMSG " + targetClient->nickname() + " :"
             + params[1] + "\r\n");
 
@@ -227,7 +227,7 @@ bool    ClientCommand::unknown(Client &client, const Parser &message)
 // Queues an IRC reply for a client.
 void    ClientCommand::reply(Client &client, const std::string &message) const
 {
-    client.sendBuffer().append(message);
+    client.queueSendData(message);
 }
 
 

@@ -66,7 +66,7 @@ void    Poll::appendClients(std::vector<struct pollfd> &pollFds,
         pollFd.fd = (*it)->fd();
         pollFd.events = POLLIN;
 
-        if ((*it)->sendBuffer().hasData())
+        if ((*it)->hasSendData())
             pollFd.events |= POLLOUT;   // pollFd.events = POLLIN | POLLOUT
 
         pollFd.revents = 0;

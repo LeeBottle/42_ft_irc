@@ -2,6 +2,7 @@
 # define CLIENT_HPP
 
 # include <string>
+# include <cstddef>
 
 # include "client/ReceiveBuffer.hpp"
 # include "client/SendBuffer.hpp"
@@ -16,8 +17,6 @@ public:
     const std::string   &nickname() const;
     const std::string   &username() const;
     const std::string   &realname() const;
-    ReceiveBuffer       &receiveBuffer();
-    SendBuffer          &sendBuffer();
     std::string         prefix() const;
     
     int     fd() const;
@@ -28,6 +27,15 @@ public:
     void    acceptPassword();
     void    setNickname(const std::string &);
     void    setUser(const std::string &, const std::string &);
+
+    void        appendReceivedData(const char *, size_t);
+    bool        popReceivedLine(std::string &);
+
+    void        queueSendData(const std::string &);
+    bool        hasSendData() const;
+    const char  *sendData() const;
+    size_t      sendSize() const;
+    void        removeSentData(size_t);
 
 private:
     int             _fd;

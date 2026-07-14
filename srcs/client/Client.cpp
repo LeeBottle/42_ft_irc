@@ -56,20 +56,6 @@ const std::string   &Client::realname() const
 }
 
 
-// Returns the client receive buffer.
-ReceiveBuffer &Client::receiveBuffer()
-{
-    return (_receive);
-}
-
-
-// Returns the client send buffer.
-SendBuffer    &Client::sendBuffer()
-{
-    return (_send);
-}
-
-
 // Builds the IRC prefix for this client.
 std::string Client::prefix() const
 {
@@ -134,6 +120,48 @@ void    Client::setUser(const std::string &username,
     _username = username;
     _realname = realname;
     updateRegistration();
+}
+
+
+void    Client::appendReceivedData(const char *data, size_t length)
+{
+    _receive.append(data, length);
+}
+
+
+bool    Client::popReceivedLine(std::string &line)
+{
+    return (_receive.pop(line));
+}
+
+
+void    Client::queueSendData(const std::string &data)
+{
+    _send.append(data);
+}
+
+
+bool    Client::hasSendData() const
+{
+    return (_send.hasData());
+}
+
+
+const char  *Client::sendData() const
+{
+    return (_send.data());
+}
+
+
+size_t  Client::sendSize() const
+{
+    return (_send.size());
+}
+
+
+void    Client::removeSentData(size_t length)
+{
+    _send.remove(length);
 }
 
 

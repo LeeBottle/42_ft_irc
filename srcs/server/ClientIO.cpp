@@ -66,7 +66,7 @@ bool    ClientIO::receive(ClientManager &clients, ChannelManager &channels,
 #ifdef DEBUG_RECV
         printRawLog(clientFd, buffer, bytesRead);
 #endif
-        client->receiveBuffer().append(buffer,
+        client->appendReceivedData(buffer,
             static_cast<size_t>(bytesRead));
         return (true);
     }
@@ -96,16 +96,15 @@ void    ClientIO::send(ClientManager &clients, ChannelManager &channels,
     ssize_t sendByteCount;
 
     client = clients.findByFd(clientFd);
-    if (client == NULL || !client->sendBuffer().hasData())
+    if (client == NULL || !client->hasSendData())
         return ;
 
-    sendByteCount = ::send(clientFd, client->sendBuffer().data(),
-            client->sendBuffer().size(), 0);
+    sendByteCount = ::send(clientFd, client->sendData(),
+            client->sendSize(), 0);
 
     if (sendByteCount > 0)
     {
-        client->sendBuffer().remove(
-            static_cast<size_t>(sendByteCount));
+        client->removeSentData(static_cast<size_t>(sendByteCount));
         return ;
     }
 
