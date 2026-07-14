@@ -8,7 +8,6 @@
 #endif
 
 
-// Initializes this object with the supplied state.
 Message::Message(const std::string &password, ClientManager &clients,
     ChannelManager &channels)
     : _command(password, clients, channels)
@@ -16,7 +15,6 @@ Message::Message(const std::string &password, ClientManager &clients,
 }
 
 
-// Destroys this object and releases its owned resources.
 Message::~Message()
 {
 }
@@ -34,7 +32,7 @@ bool    Message::handle(Client &client, const std::string &line)
 }
 
 
-// Processes complete IRC messages currently buffered for a client.
+// process complete IRC message currently buffered for a client
 bool    Message::process(Client &client)
 {
     std::string line;

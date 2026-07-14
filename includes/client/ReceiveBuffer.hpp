@@ -4,7 +4,7 @@
 # include <cstddef>
 # include <string>
 
-// accumulate received byte and extract complete IRC line
+// accumulate received byte and extract complete IRC command line
 class ReceiveBuffer
 {
 public:
@@ -14,7 +14,6 @@ public:
     void                append(const char *, size_t);
     const std::string   &data() const;
     bool                pop(std::string &);
-    void                remove(size_t);
 
 private:
     std::string _buffer;
