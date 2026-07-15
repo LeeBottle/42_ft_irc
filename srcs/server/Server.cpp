@@ -38,7 +38,7 @@ bool    Server::run()
 
     while (!_signal.shouldStop())
     {
-        _poll.build(pollFds, _listener, _clients);  // add fd to monitor
+        _poll.build(pollFds, _listener, _clients);  // build pollFds to monitor
 
         if (!_event.wait(pollFds))  // Server wait until event cause
             return (false);
